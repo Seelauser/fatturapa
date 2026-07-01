@@ -1,16 +1,17 @@
 FROM php:8.3-cli-alpine AS base
 
-RUN apk add --no-cache curl \
- && docker-php-ext-install mbstring
+RUN apk add --no-cache curl libxml2-dev \
+ && docker-php-ext-install mbstring dom pdo pdo_mysql
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # ── Install deps ──────────────────────────────────────────────
+# The bundled Slim microservice + Openapi transport live in require-dev, so the
+# server image installs WITH dev deps (the library itself needs only ext-dom).
 FROM base AS deps
 WORKDIR /app
 COPY composer.json composer.lock* ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress 2>/dev/null || \
-    composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
+RUN composer install --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # ── Production runner ─────────────────────────────────────────
 FROM base AS runner

@@ -1,39 +1,92 @@
 <?php
+
 declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use Slim\Factory\AppFactory;
+use AlpsFatturapa\NumeratoreService;
+use AlpsFatturapa\Transport\OpenapiClient;
+use AlpsFatturapa\XmlBuilder;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Factory\AppFactory;
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->safeLoad();
+if (is_file(__DIR__ . '/../.env')) {
+    Dotenv\Dotenv::createImmutable(__DIR__ . '/..')->safeLoad();
+}
 
 $app = AppFactory::create();
-$app->addErrorMiddleware(false, true, true);
+$app->addBodyParsingMiddleware();
+$app->addErrorMiddleware((getenv('APP_ENV') !== 'production'), true, true);
+
+$json = static function (Response $res, array $data, int $status = 200): Response {
+    $res->getBody()->write((string) json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    return $res->withHeader('Content-Type', 'application/json')->withStatus($status);
+};
 
 // Health check
-$app->get('/health', function (Request $req, Response $res): Response {
-    $res->getBody()->write(json_encode(['status' => 'ok']));
-    return $res->withHeader('Content-Type', 'application/json');
+$app->get('/health', fn (Request $req, Response $res) => $json($res, ['status' => 'ok']));
+
+// POST /fattura/build  { invoice: {...} }  → build (and validate) FatturaPA XML
+$app->post('/fattura/build', function (Request $req, Response $res) use ($json): Response {
+    $body = (array) $req->getParsedBody();
+    $invoice = $body['invoice'] ?? $body;
+    try {
+        $builder = new XmlBuilder();
+        $xml = $builder->build($invoice);
+        $errors = $builder->validate($xml);
+        return $json($res, ['xml' => $xml, 'valid' => $errors === [], 'errors' => $errors], 201);
+    } catch (\InvalidArgumentException $e) {
+        return $json($res, ['error' => $e->getMessage()], 422);
+    }
 });
 
-// Build FatturaPA XML
-// POST /fattura/build  { invoice: {...} }
-$app->post('/fattura/build', function (Request $req, Response $res): Response {
-    $body = json_decode((string) $req->getBody(), true);
-    // TODO: wire to XmlBuilder after namespace migration
-    $res->getBody()->write(json_encode(['xml' => null, 'error' => 'not_implemented']));
-    return $res->withHeader('Content-Type', 'application/json')->withStatus(501);
+// POST /fattura/numero  { year?, sezionale? }  → reserve the next invoice number
+$app->post('/fattura/numero', function (Request $req, Response $res) use ($json): Response {
+    $pdo = pdoFromEnv();
+    if (!$pdo) {
+        return $json($res, ['error' => 'numbering DB not configured (set DB_HOST/DB_DATABASE/...)'], 503);
+    }
+    $body = (array) $req->getParsedBody();
+    $service = new NumeratoreService($pdo, getenv('SDI_SEQUENCE_TABLE') ?: 'sdi_sequence');
+    $service->ensureTable();
+    $numero = $service->next(
+        isset($body['year']) ? (int) $body['year'] : null,
+        (string) ($body['sezionale'] ?? '')
+    );
+    return $json($res, ['numero' => $numero], 201);
 });
 
-// Send to SdI
-// POST /fattura/send  { invoice_id: N }
-$app->post('/fattura/send', function (Request $req, Response $res): Response {
-    // TODO: wire to OpenapiClient after namespace migration
-    $res->getBody()->write(json_encode(['error' => 'not_implemented']));
-    return $res->withHeader('Content-Type', 'application/json')->withStatus(501);
+// POST /fattura/send  { xml, meta? }  → transmit to SdI (manual, irreversible)
+$app->post('/fattura/send', function (Request $req, Response $res) use ($json): Response {
+    $body = (array) $req->getParsedBody();
+    if (empty($body['xml'])) {
+        return $json($res, ['error' => 'missing xml'], 422);
+    }
+    try {
+        $client = OpenapiClient::createFromEnv(getenv('SDI_MODE') !== 'production');
+        $result = $client->sendInvoice((string) $body['xml'], (array) ($body['meta'] ?? []));
+        return $json($res, $result, 201);
+    } catch (\AlpsFatturapa\Exception\TransportException $e) {
+        return $json($res, ['error' => $e->getMessage()], 502);
+    }
 });
 
 $app->run();
+
+/** Build a PDO from env, or null when DB env is absent. */
+function pdoFromEnv(): ?PDO
+{
+    $host = getenv('DB_HOST');
+    $db = getenv('DB_DATABASE');
+    if (!$host || !$db) {
+        return null;
+    }
+    $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $host, $db);
+    if ($port = getenv('DB_PORT')) {
+        $dsn .= ';port=' . $port;
+    }
+    return new PDO($dsn, getenv('DB_USERNAME') ?: 'root', getenv('DB_PASSWORD') ?: '', [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    ]);
+}
