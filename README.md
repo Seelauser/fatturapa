@@ -97,6 +97,12 @@ php -S 0.0.0.0:8080 -t public
 Env: `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_PORT`, `SDI_SEQUENCE_TABLE`,
 `OPENAPI_TOKEN`, `SDI_MODE` (`production` disables sandbox).
 
+## Documentation
+
+- [docs/CAPABILITIES.md](docs/CAPABILITIES.md) — what works today, verified plug-and-play surface
+- [docs/GAPS.md](docs/GAPS.md) — known gaps, bugs, and compliance holes (ordered by severity)
+- [docs/ROADMAP.md](docs/ROADMAP.md) — market positioning, transport-adapter priorities, release plan
+
 ## Test
 
 ```bash
