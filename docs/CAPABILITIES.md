@@ -1,9 +1,13 @@
 # Capabilities — what works today (plug and play)
 
-> Status audit of `alpsplanner/fatturapa` at commit `edf082a`, verified by running the
-> code on PHP 8.3 (tests, XSD validation against the official schema, and a live
-> MariaDB concurrency test). Companion documents: [GAPS.md](GAPS.md) for what is
-> missing, [ROADMAP.md](ROADMAP.md) for where to take the package.
+> Status audit of `alpsplanner/fatturapa`, verified by running the code on PHP 8.3
+> (tests, XSD validation against the official schema, and a live MariaDB
+> concurrency test). Updated for **0.2.0** (see [CHANGELOG](../CHANGELOG.md)):
+> XSD 1.2.3, TD01–TD29, bollo, split payment, CIG/CUP, DatiPagamento, person
+> cedente, field-level validation, **PEC transport** (self-sufficient, no
+> third-party service), SdI notification parser, API-key-protected microservice.
+> Companion documents: [GAPS.md](GAPS.md) for what is missing,
+> [ROADMAP.md](ROADMAP.md) for where to take the package.
 
 ## Verified working
 

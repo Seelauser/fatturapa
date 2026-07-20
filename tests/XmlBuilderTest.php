@@ -34,12 +34,24 @@ final class XmlBuilderTest extends TestCase
         ], $overrides);
     }
 
+    /** Build and, when the XSD is vendored, assert schema validity too. */
+    private function buildValid(array $invoice): string
+    {
+        $builder = new XmlBuilder();
+        $xml = $builder->build($invoice);
+        if ($builder->xsdPath() !== null) {
+            $this->assertSame([], $builder->validate($xml), 'XML should be XSD-valid');
+        }
+        return $xml;
+    }
+
     public function testBuildsWellFormedXml(): void
     {
-        $xml = (new XmlBuilder())->build($this->sampleInvoice());
+        $xml = $this->buildValid($this->sampleInvoice());
 
         $this->assertStringContainsString('<p:FatturaElettronica', $xml);
         $this->assertStringContainsString('versione="FPR12"', $xml);
+        $this->assertStringContainsString('<TipoDocumento>TD01</TipoDocumento>', $xml);
         $this->assertStringContainsString('<Numero>2026/00042</Numero>', $xml);
 
         $doc = new \DOMDocument();
@@ -48,7 +60,7 @@ final class XmlBuilderTest extends TestCase
 
     public function testComputesVatAndDocumentTotal(): void
     {
-        $xml = (new XmlBuilder())->build($this->sampleInvoice());
+        $xml = $this->buildValid($this->sampleInvoice());
         // 100.00 imponibile, 22% → 22.00 imposta, 122.00 total.
         $this->assertStringContainsString('<ImponibileImporto>100.00</ImponibileImporto>', $xml);
         $this->assertStringContainsString('<Imposta>22.00</Imposta>', $xml);
@@ -57,7 +69,7 @@ final class XmlBuilderTest extends TestCase
 
     public function testEsenteLineHasNoVat(): void
     {
-        $xml = (new XmlBuilder())->build($this->sampleInvoice([
+        $xml = $this->buildValid($this->sampleInvoice([
             'linee' => [
                 ['descrizione' => 'Mitgliedsbeitrag', 'quantita' => 1, 'prezzo_unitario' => 50.0, 'aliquota_iva' => 0.0, 'natura' => 'N4'],
             ],
@@ -65,13 +77,109 @@ final class XmlBuilderTest extends TestCase
         $this->assertStringContainsString('<Natura>N4</Natura>', $xml);
         $this->assertStringContainsString('<Imposta>0.00</Imposta>', $xml);
         $this->assertStringContainsString('<ImportoTotaleDocumento>50.00</ImportoTotaleDocumento>', $xml);
+        // Below the €77.47 threshold: no bollo.
+        $this->assertStringNotContainsString('<DatiBollo>', $xml);
+    }
+
+    public function testBolloAppliedAutomaticallyOnExemptOverThreshold(): void
+    {
+        $xml = $this->buildValid($this->sampleInvoice([
+            'linee' => [
+                ['descrizione' => 'Quota', 'quantita' => 1, 'prezzo_unitario' => 80.0, 'aliquota_iva' => 0.0, 'natura' => 'N4'],
+            ],
+        ]));
+        $this->assertStringContainsString('<BolloVirtuale>SI</BolloVirtuale>', $xml);
+        $this->assertStringContainsString('<ImportoBollo>2.00</ImportoBollo>', $xml);
+    }
+
+    public function testBolloExplicitOverride(): void
+    {
+        $xml = $this->buildValid($this->sampleInvoice([
+            'bollo' => false,
+            'linee' => [
+                ['descrizione' => 'Quota', 'quantita' => 1, 'prezzo_unitario' => 80.0, 'aliquota_iva' => 0.0, 'natura' => 'N4'],
+            ],
+        ]));
+        $this->assertStringNotContainsString('<DatiBollo>', $xml);
     }
 
     public function testFatturaPaUsesFpa12Format(): void
     {
-        $xml = (new XmlBuilder())->build($this->sampleInvoice(['tipo_documento' => 'fattura_pa']));
+        $xml = $this->buildValid($this->sampleInvoice(['tipo_documento' => 'fattura_pa']));
         $this->assertStringContainsString('versione="FPA12"', $xml);
         $this->assertStringContainsString('<CodiceDestinatario>999999</CodiceDestinatario>', $xml);
+    }
+
+    public function testSplitPaymentAndCigCup(): void
+    {
+        $xml = $this->buildValid($this->sampleInvoice([
+            'tipo_documento' => 'TD01',
+            'formato' => 'FPA12',
+            'esigibilita_iva' => 'S',
+            'ordine_acquisto' => ['id_documento' => 'ORD-1', 'cig' => 'Z123456789', 'cup' => 'B23D22000000001'],
+            'cessionario' => [
+                'denominazione' => 'Comune di Bolzano', 'codice_fiscale' => '00389240219',
+                'codice_destinatario' => 'UF9XI2',
+                'indirizzo' => 'Vicolo Gumer 7', 'cap' => '39100', 'comune' => 'Bolzano', 'nazione' => 'IT',
+            ],
+        ]));
+        $this->assertStringContainsString('<EsigibilitaIVA>S</EsigibilitaIVA>', $xml);
+        $this->assertStringContainsString('<CodiceCIG>Z123456789</CodiceCIG>', $xml);
+        $this->assertStringContainsString('<CodiceCUP>B23D22000000001</CodiceCUP>', $xml);
+    }
+
+    public function testCreditNoteTd04(): void
+    {
+        $xml = $this->buildValid($this->sampleInvoice(['tipo_documento' => 'TD04']));
+        $this->assertStringContainsString('<TipoDocumento>TD04</TipoDocumento>', $xml);
+    }
+
+    public function testCedenteAsPhysicalPerson(): void
+    {
+        $invoice = $this->sampleInvoice();
+        unset($invoice['cedente']['denominazione']);
+        $invoice['cedente']['nome'] = 'Max';
+        $invoice['cedente']['cognome'] = 'Muster';
+        $invoice['cedente']['regime_fiscale'] = 'RF19';
+        $xml = $this->buildValid($invoice);
+        $this->assertStringContainsString('<Nome>Max</Nome>', $xml);
+        $this->assertStringContainsString('<RegimeFiscale>RF19</RegimeFiscale>', $xml);
+    }
+
+    public function testForfettarioLineUsesN22RiferimentoDefault(): void
+    {
+        $xml = $this->buildValid($this->sampleInvoice([
+            'linee' => [
+                ['descrizione' => 'Consulenza', 'quantita' => 1, 'prezzo_unitario' => 60.0, 'aliquota_iva' => 0.0, 'natura' => 'N2.2'],
+            ],
+        ]));
+        $this->assertStringContainsString('regime forfettario', $xml);
+    }
+
+    public function testDatiPagamento(): void
+    {
+        $xml = $this->buildValid($this->sampleInvoice([
+            'pagamento' => [
+                'condizioni' => 'TP02',
+                'dettagli' => [['modalita' => 'MP05', 'iban' => 'IT60 X054 2811 1010 0000 0123 456', 'scadenza' => '2026-08-01']],
+            ],
+        ]));
+        $this->assertStringContainsString('<CondizioniPagamento>TP02</CondizioniPagamento>', $xml);
+        $this->assertStringContainsString('<ModalitaPagamento>MP05</ModalitaPagamento>', $xml);
+        $this->assertStringContainsString('<IBAN>IT60X0542811101000000123456</IBAN>', $xml);
+        $this->assertStringContainsString('<ImportoPagamento>122.00</ImportoPagamento>', $xml);
+    }
+
+    public function testUnitPriceKeepsFullPrecision(): void
+    {
+        // SdI check 00423: PrezzoTotale must equal PrezzoUnitario × Quantita.
+        $xml = $this->buildValid($this->sampleInvoice([
+            'linee' => [
+                ['descrizione' => 'x', 'quantita' => 3, 'prezzo_unitario' => 0.333, 'aliquota_iva' => 22.0],
+            ],
+        ]));
+        $this->assertStringContainsString('<PrezzoUnitario>0.333</PrezzoUnitario>', $xml);
+        $this->assertStringContainsString('<PrezzoTotale>1.00</PrezzoTotale>', $xml);
     }
 
     public function testMissingMandatoryKeyThrows(): void
@@ -80,6 +188,47 @@ final class XmlBuilderTest extends TestCase
         $invoice = $this->sampleInvoice();
         unset($invoice['numero']);
         (new XmlBuilder())->build($invoice);
+    }
+
+    public function testCollectsAllErrorsAtOnce(): void
+    {
+        $invoice = $this->sampleInvoice();
+        unset($invoice['cessionario']['indirizzo'], $invoice['cedente']['denominazione']);
+        $invoice['linee'][0]['aliquota_iva'] = 0.0; // natura missing
+        try {
+            (new XmlBuilder())->build($invoice);
+            $this->fail('expected InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('cessionario.indirizzo', $e->getMessage());
+            $this->assertStringContainsString('cedente needs denominazione or nome+cognome', $e->getMessage());
+            $this->assertStringContainsString('natura is mandatory when aliquota_iva is 0', $e->getMessage());
+        }
+    }
+
+    public function testNaturaWithNonZeroAliquotaThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (new XmlBuilder())->build($this->sampleInvoice([
+            'linee' => [
+                ['descrizione' => 'x', 'quantita' => 1, 'prezzo_unitario' => 10.0, 'aliquota_iva' => 22.0, 'natura' => 'N4'],
+            ],
+        ]));
+    }
+
+    public function testGenericNaturaRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (new XmlBuilder())->build($this->sampleInvoice([
+            'linee' => [
+                ['descrizione' => 'x', 'quantita' => 1, 'prezzo_unitario' => 10.0, 'aliquota_iva' => 0.0, 'natura' => 'N2'],
+            ],
+        ]));
+    }
+
+    public function testInvalidTipoDocumentoThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (new XmlBuilder())->build($this->sampleInvoice(['tipo_documento' => 'TD99']));
     }
 
     public function testCessionarioWithoutTaxIdThrows(): void
@@ -92,7 +241,7 @@ final class XmlBuilderTest extends TestCase
 
     public function testAggregatesRiepilogoAcrossLinesWithSameRate(): void
     {
-        $xml = (new XmlBuilder())->build($this->sampleInvoice([
+        $xml = $this->buildValid($this->sampleInvoice([
             'linee' => [
                 ['descrizione' => 'A', 'quantita' => 1, 'prezzo_unitario' => 100.0, 'aliquota_iva' => 22.0],
                 ['descrizione' => 'B', 'quantita' => 2, 'prezzo_unitario' => 50.0, 'aliquota_iva' => 22.0],

@@ -44,8 +44,8 @@ deved on XML generation alone is a losing move; the durable differentiators are:
 | 2 | **Aruba** | Raw XML (`/invoice/upload` auto-signs, `/uploadSigned` for p7m), conservazione included from €29.90/yr | OAuth2 password grant, 30-min tokens, ~30 uploads/min rate limit; full API automation is the ~€600/yr Premium tier |
 | 3 | **A-Cube** | Developer-first, JWT (24h), webhooks with secret token, Legal Storage API | Sales-gated pricing |
 | 4 | **Fatture in Cloud** | Huge install base (TeamSystem) | ⚠️ **Cannot accept external XML** — adapter must map the invoice array to their document model instead of sending built XML. Different adapter shape: `DocumentModelTransport` |
-| 5 | **PEC channel** | Zero-dependency fallback, only a PEC mailbox needed | Async email, ≤5 MB/invoice, notification matching by filename; signature+conservazione on the caller |
-| later | **Direct SDICoop** | Free per-invoice, "expert mode" | SOAP+MTOM, mutual-TLS certs from Sogei, accreditation ceremony, you must sign (CAdES/XAdES) and archive yourself — only worth it at volume |
+| ✅ done | **PEC channel** | **Self-sufficiency requirement: no third-party service, only your own PEC mailbox** | Shipped in 0.2.0 (`PecTransport` + own `SmtpClient`); async email, ≤5 MB/invoice; conservazione via the free AdE service; B2B needs no signature |
+| next (independence track) | **Direct SDICoop** | Free per-invoice, fully independent | SOAP+MTOM, mutual-TLS certs from Sogei, accreditation ceremony, you must sign (CAdES/XAdES) and archive yourself — the end-state of the "build it ourselves" strategy |
 | skip | Zucchetti Digital Hub, TS Digital/Agyo, InfoCert | Docs behind sales/NDA — impossible to maintain an open-source adapter | Their users can implement `SdiTransport` privately |
 
 Design implications from the provider survey:
@@ -104,9 +104,13 @@ send+receive as one product.
 
 ## Suggested release plan
 
-- **v0.2 — trustworthy core**: microservice auth (GAPS #1), XSD 1.2.3, bollo,
-  TD04/TD24, cedente as person, field-level validation, decimal-precision fix,
-  DatiPagamento. *This makes the package honestly production-usable.*
+> Direction set 2026-07-20: **independence first** — prefer self-built channels
+> (PEC now, direct SDICoop later) over provider adapters; provider adapters stay
+> optional conveniences.
+
+- ✅ **v0.2 — trustworthy core** (shipped): microservice auth, XSD 1.2.3, bollo,
+  TD01–TD29, cedente as person, field-level validation, decimal-precision fix,
+  DatiPagamento, split payment + CIG/CUP, **PEC transport + notification parser**.
 - **v0.3 — segment presets**: forfettario / PA (split payment, CIG/CUP) /
   professional (ritenuta, cassa) profiles + enum validation + rule engine.
 - **v0.4 — lifecycle**: notification objects, webhook + polling on the contract,
