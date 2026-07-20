@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0 — 2026-07-20
+
+Professionals, portable numbering, and the closed PEC loop — still zero
+third-party dependencies.
+
+### Added
+- **Ritenuta d'acconto** (`ritenuta` block RT01–RT06 + per-line `ritenuta`
+  flag; auto-computed importo; SdI 00411 coherence enforced) and
+  **cassa previdenziale** (`cassa` block TC01–TC22, contribution auto-added to
+  the correct VAT riepilogo and document total, INPS-rivalsa ritenuta flag).
+- **Line discounts**: `sconto_percentuale` / `sconto_importo` →
+  `ScontoMaggiorazione` with consistent `PrezzoTotale` (SdI 00423 safe).
+- **PEC inbox polling**: dependency-free `ImapClient` (ext-imap is deprecated),
+  `MimeAttachmentExtractor` (recurses into the PEC `postacert.eml` envelope),
+  `PecInboxReader::fetchNotifications()`, and microservice route
+  `GET /fattura/inbox`.
+- **Portable numbering**: `NumeratoreService` now also supports PostgreSQL and
+  SQLite ≥3.35 via a single atomic `UPSERT … RETURNING`; MariaDB/MySQL path
+  unchanged (concurrency re-verified: 20 processes × 10 → exactly 200).
+
+### Fixed
+- Sezionale counters are now case-insensitive (`'ext'` and `'EXT'` used to get
+  independent counters while printing the same invoice number).
+
 ## 0.2.0 — 2026-07-20
 
 Self-sufficiency and compliance release: everything that can run without a

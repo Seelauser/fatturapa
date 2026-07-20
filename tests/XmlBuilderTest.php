@@ -252,4 +252,60 @@ final class XmlBuilderTest extends TestCase
         $this->assertStringContainsString('<Imposta>44.00</Imposta>', $xml);
         $this->assertStringContainsString('<ImportoTotaleDocumento>244.00</ImportoTotaleDocumento>', $xml);
     }
+    public function testRitenutaAcconto(): void
+    {
+        $invoice = $this->sampleInvoice([
+            'ritenuta' => ['tipo' => 'RT01', 'aliquota' => 20.0, 'causale' => 'A'],
+            'linee' => [
+                ['descrizione' => 'Consulenza', 'quantita' => 1, 'prezzo_unitario' => 1000.0, 'aliquota_iva' => 22.0, 'ritenuta' => true],
+            ],
+        ]);
+        $xml = $this->buildValid($invoice);
+        $this->assertStringContainsString('<TipoRitenuta>RT01</TipoRitenuta>', $xml);
+        $this->assertStringContainsString('<ImportoRitenuta>200.00</ImportoRitenuta>', $xml);
+        $this->assertStringContainsString('<CausalePagamento>A</CausalePagamento>', $xml);
+        $this->assertStringContainsString('<Ritenuta>SI</Ritenuta>', $xml);
+        // Ritenuta does not reduce the document total.
+        $this->assertStringContainsString('<ImportoTotaleDocumento>1220.00</ImportoTotaleDocumento>', $xml);
+    }
+
+    public function testLineRitenutaWithoutBlockThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        (new XmlBuilder())->build($this->sampleInvoice([
+            'linee' => [
+                ['descrizione' => 'x', 'quantita' => 1, 'prezzo_unitario' => 100.0, 'aliquota_iva' => 22.0, 'ritenuta' => true],
+            ],
+        ]));
+    }
+
+    public function testCassaPrevidenziale(): void
+    {
+        // 1000 + 4% INPS rivalsa = 1040 imponibile at 22% -> 228.80 IVA, 1268.80 total.
+        $xml = $this->buildValid($this->sampleInvoice([
+            'cassa' => ['tipo' => 'TC22', 'aliquota' => 4.0, 'aliquota_iva' => 22.0],
+            'linee' => [
+                ['descrizione' => 'Consulenza', 'quantita' => 1, 'prezzo_unitario' => 1000.0, 'aliquota_iva' => 22.0],
+            ],
+        ]));
+        $this->assertStringContainsString('<TipoCassa>TC22</TipoCassa>', $xml);
+        $this->assertStringContainsString('<ImportoContributoCassa>40.00</ImportoContributoCassa>', $xml);
+        $this->assertStringContainsString('<ImponibileImporto>1040.00</ImponibileImporto>', $xml);
+        $this->assertStringContainsString('<Imposta>228.80</Imposta>', $xml);
+        $this->assertStringContainsString('<ImportoTotaleDocumento>1268.80</ImportoTotaleDocumento>', $xml);
+    }
+
+    public function testLineSconto(): void
+    {
+        // 100 with 10% discount -> 90 imponibile, 19.80 IVA.
+        $xml = $this->buildValid($this->sampleInvoice([
+            'linee' => [
+                ['descrizione' => 'Servizio', 'quantita' => 1, 'prezzo_unitario' => 100.0, 'aliquota_iva' => 22.0, 'sconto_percentuale' => 10.0],
+            ],
+        ]));
+        $this->assertStringContainsString('<Tipo>SC</Tipo>', $xml);
+        $this->assertStringContainsString('<Percentuale>10.00</Percentuale>', $xml);
+        $this->assertStringContainsString('<PrezzoTotale>90.00</PrezzoTotale>', $xml);
+        $this->assertStringContainsString('<ImportoTotaleDocumento>109.80</ImportoTotaleDocumento>', $xml);
+    }
 }

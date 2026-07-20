@@ -111,8 +111,9 @@ send+receive as one product.
 - ✅ **v0.2 — trustworthy core** (shipped): microservice auth, XSD 1.2.3, bollo,
   TD01–TD29, cedente as person, field-level validation, decimal-precision fix,
   DatiPagamento, split payment + CIG/CUP, **PEC transport + notification parser**.
-- **v0.3 — segment presets**: forfettario / PA (split payment, CIG/CUP) /
-  professional (ritenuta, cassa) profiles + enum validation + rule engine.
+- ✅ **v0.3 — professionals + closed PEC loop** (shipped): ritenuta d'acconto,
+  cassa previdenziale, line discounts, PEC inbox polling (own IMAP client +
+  PEC-envelope MIME parsing), portable numbering (PostgreSQL/SQLite).
 - **v0.4 — lifecycle**: notification objects, webhook + polling on the contract,
   status endpoint in the microservice, Invoicetronic + Aruba adapters.
 - **v0.5 — distribution**: Laravel bridge (facade, config, queue-friendly

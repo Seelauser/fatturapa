@@ -27,7 +27,14 @@ use InvalidArgumentException;
  *   'esigibilita_iva'   => 'I'|'D'|'S',        // optional; 'S' = split payment (PA)
  *   'cedente'     => [ denominazione | nome+cognome, partita_iva, regime_fiscale?, indirizzo, cap, comune, provincia?, nazione?, codice_fiscale? ],
  *   'cessionario' => [ denominazione | nome+cognome, partita_iva|codice_fiscale, codice_destinatario?, pec?, indirizzo, cap, comune, provincia?, nazione? ],
- *   'linee'       => [ ['descrizione'=>, 'quantita'=>, 'prezzo_unitario'=>, 'aliquota_iva'=>, 'natura'=>?, 'riferimento_normativo'=>?], ... ],
+ *   'linee'       => [ ['descrizione'=>, 'quantita'=>, 'prezzo_unitario'=>, 'aliquota_iva'=>, 'natura'=>?,
+ *                       'riferimento_normativo'=>?, 'ritenuta'=>bool?, 'sconto_percentuale'=>?, 'sconto_importo'=>?], ... ],
+ *   'ritenuta'    => [                          // optional; required when a line has 'ritenuta'=>true (SdI 00411)
+ *     'tipo' => 'RT01'..'RT06', 'aliquota' => 20.0, 'causale' => 'A', 'importo' => ?,  // importo auto: aliquota% of flagged lines
+ *   ],
+ *   'cassa'       => [                          // optional: cassa previdenziale (professionals)
+ *     'tipo' => 'TC01'..'TC22', 'aliquota' => 4.0, 'aliquota_iva' => 22.0, 'natura' => ?, 'ritenuta' => bool?, 'importo' => ?,
+ *   ],
  *   'ordine_acquisto' => ['id_documento'=>?, 'cig'=>?, 'cup'=>?],   // optional (PA: CIG/CUP)
  *   'pagamento'   => [                          // optional
  *     'condizioni' => 'TP01'|'TP02'|'TP03',     // default TP02
@@ -114,18 +121,29 @@ class XmlBuilder
         $esigibilita = $f['esigibilita_iva'] ?? 'I';
         $totaleDocumento = 0.0;
         $totaleEsente = 0.0;
+        $imponibileRitenuta = 0.0;
         foreach (array_values($f['linee']) as $i => $linea) {
             $qta = (float) ($linea['quantita'] ?? 1);
             $prezzo = (float) $linea['prezzo_unitario'];
             $aliquota = (float) ($linea['aliquota_iva'] ?? 22.0);
             $natura = $linea['natura'] ?? null;
-            $imponibile = round($qta * $prezzo, 2);
+            $scontoPct = isset($linea['sconto_percentuale']) ? (float) $linea['sconto_percentuale'] : null;
+            $scontoImp = isset($linea['sconto_importo']) ? (float) $linea['sconto_importo'] : null;
+            $lordo = $qta * $prezzo;
+            $sconto = $scontoPct !== null ? round($lordo * $scontoPct / 100, 2) : ($scontoImp ?? 0.0);
+            $imponibile = round($lordo - $sconto, 2);
+            $conRitenuta = !empty($linea['ritenuta']);
 
             $lines[] = [
                 'numero' => $i + 1, 'descrizione' => $linea['descrizione'],
                 'quantita' => $qta, 'prezzo' => $prezzo, 'totale' => $imponibile,
                 'aliquota' => $aliquota, 'natura' => $natura,
+                'sconto_pct' => $scontoPct, 'sconto_importo' => $sconto > 0 ? $sconto : null,
+                'ritenuta' => $conRitenuta,
             ];
+            if ($conRitenuta) {
+                $imponibileRitenuta += $imponibile;
+            }
 
             $key = $this->dec($aliquota) . '|' . ($natura ?? '');
             $riepiloghi[$key]['aliquota'] = $aliquota;
@@ -135,6 +153,31 @@ class XmlBuilder
                 $riepiloghi[$key]['riferimento_normativo'] = $linea['riferimento_normativo'];
             }
         }
+
+        // Cassa previdenziale contributes to the taxable base of its own aliquota.
+        $cassa = null;
+        if (!empty($f['cassa'])) {
+            $c = $f['cassa'];
+            $aliquotaCassa = (float) ($c['aliquota'] ?? 4.0);
+            $aliquotaIvaCassa = (float) ($c['aliquota_iva'] ?? 22.0);
+            $naturaCassa = $c['natura'] ?? null;
+            $imponibileCassa = array_sum(array_map(fn ($l) => $l['totale'], $lines));
+            $importoCassa = isset($c['importo']) ? (float) $c['importo'] : round($imponibileCassa * $aliquotaCassa / 100, 2);
+            $cassa = [
+                'tipo' => $c['tipo'] ?? 'TC22', 'aliquota' => $aliquotaCassa,
+                'importo' => $importoCassa, 'imponibile' => $imponibileCassa,
+                'aliquota_iva' => $aliquotaIvaCassa, 'natura' => $naturaCassa,
+                'ritenuta' => !empty($c['ritenuta']),
+            ];
+            if ($cassa['ritenuta']) {
+                $imponibileRitenuta += $importoCassa;
+            }
+            $key = $this->dec($aliquotaIvaCassa) . '|' . ($naturaCassa ?? '');
+            $riepiloghi[$key]['aliquota'] = $aliquotaIvaCassa;
+            $riepiloghi[$key]['natura'] = $naturaCassa;
+            $riepiloghi[$key]['imponibile'] = ($riepiloghi[$key]['imponibile'] ?? 0) + $importoCassa;
+        }
+
         foreach ($riepiloghi as &$r) {
             $r['imposta'] = $r['natura'] ? 0.0 : round($r['imponibile'] * $r['aliquota'] / 100, 2);
             $totaleDocumento += $r['imponibile'] + $r['imposta'];
@@ -143,6 +186,19 @@ class XmlBuilder
             }
         }
         unset($r);
+
+        // Ritenuta d'acconto: shown in the document, withheld at payment (does not reduce the total).
+        $ritenuta = null;
+        if (!empty($f['ritenuta'])) {
+            $rt = $f['ritenuta'];
+            $aliquotaRit = (float) ($rt['aliquota'] ?? 20.0);
+            $ritenuta = [
+                'tipo' => $rt['tipo'] ?? 'RT01',
+                'aliquota' => $aliquotaRit,
+                'importo' => isset($rt['importo']) ? (float) $rt['importo'] : round($imponibileRitenuta * $aliquotaRit / 100, 2),
+                'causale' => $rt['causale'] ?? 'A',
+            ];
+        }
 
         // Bollo: explicit flag wins; otherwise automatic €2 rule on exempt totals.
         $bollo = $f['bollo'] ?? ($totaleEsente > self::BOLLO_THRESHOLD);
@@ -197,17 +253,39 @@ class XmlBuilder
         // ---- Body ----
         $body = $this->el($doc, $root, 'FatturaElettronicaBody');
         $datiGenerali = $this->el($doc, $body, 'DatiGenerali');
-        // DatiGeneraliDocumento children in XSD sequence order:
-        // TipoDocumento, Divisa, Data, Numero, DatiBollo?, ImportoTotaleDocumento?, Causale*
+        // DatiGeneraliDocumento children in XSD sequence order: TipoDocumento, Divisa,
+        // Data, Numero, DatiRitenuta*, DatiBollo?, DatiCassaPrevidenziale*,
+        // ImportoTotaleDocumento?, Causale*
         $dgd = $this->el($doc, $datiGenerali, 'DatiGeneraliDocumento');
         $this->el($doc, $dgd, 'TipoDocumento', $td);
         $this->el($doc, $dgd, 'Divisa', 'EUR');
         $this->el($doc, $dgd, 'Data', $f['data']);
         $this->el($doc, $dgd, 'Numero', $f['numero']);
+        if ($ritenuta !== null) {
+            $dr = $this->el($doc, $dgd, 'DatiRitenuta');
+            $this->el($doc, $dr, 'TipoRitenuta', $ritenuta['tipo']);
+            $this->el($doc, $dr, 'ImportoRitenuta', $this->dec($ritenuta['importo']));
+            $this->el($doc, $dr, 'AliquotaRitenuta', $this->dec($ritenuta['aliquota']));
+            $this->el($doc, $dr, 'CausalePagamento', $ritenuta['causale']);
+        }
         if ($bollo) {
             $db = $this->el($doc, $dgd, 'DatiBollo');
             $this->el($doc, $db, 'BolloVirtuale', 'SI');
             $this->el($doc, $db, 'ImportoBollo', '2.00');
+        }
+        if ($cassa !== null) {
+            $dc = $this->el($doc, $dgd, 'DatiCassaPrevidenziale');
+            $this->el($doc, $dc, 'TipoCassa', $cassa['tipo']);
+            $this->el($doc, $dc, 'AlCassa', $this->dec($cassa['aliquota']));
+            $this->el($doc, $dc, 'ImportoContributoCassa', $this->dec($cassa['importo']));
+            $this->el($doc, $dc, 'ImponibileCassa', $this->dec($cassa['imponibile']));
+            $this->el($doc, $dc, 'AliquotaIVA', $this->dec($cassa['aliquota_iva']));
+            if ($cassa['ritenuta']) {
+                $this->el($doc, $dc, 'Ritenuta', 'SI');
+            }
+            if ($cassa['natura']) {
+                $this->el($doc, $dc, 'Natura', $cassa['natura']);
+            }
         }
         $this->el($doc, $dgd, 'ImportoTotaleDocumento', $this->dec($totaleDocumento));
         if (!empty($f['causale'])) {
@@ -237,8 +315,20 @@ class XmlBuilder
             $this->el($doc, $det, 'Descrizione', $l['descrizione']);
             $this->el($doc, $det, 'Quantita', $this->dec($l['quantita']));
             $this->el($doc, $det, 'PrezzoUnitario', $this->price($l['prezzo']));
+            // DettaglioLinee order: …, PrezzoUnitario, ScontoMaggiorazione*, PrezzoTotale, AliquotaIVA, Ritenuta?, Natura?
+            if ($l['sconto_importo'] !== null) {
+                $sm = $this->el($doc, $det, 'ScontoMaggiorazione');
+                $this->el($doc, $sm, 'Tipo', 'SC');
+                if ($l['sconto_pct'] !== null) {
+                    $this->el($doc, $sm, 'Percentuale', $this->dec($l['sconto_pct']));
+                }
+                $this->el($doc, $sm, 'Importo', $this->dec($l['sconto_importo']));
+            }
             $this->el($doc, $det, 'PrezzoTotale', $this->dec($l['totale']));
             $this->el($doc, $det, 'AliquotaIVA', $this->dec($l['aliquota']));
+            if ($l['ritenuta']) {
+                $this->el($doc, $det, 'Ritenuta', 'SI');
+            }
             if ($l['natura']) {
                 $this->el($doc, $det, 'Natura', $l['natura']);
             }
@@ -379,6 +469,21 @@ class XmlBuilder
             if ($aliquota != 0.0 && $natura !== null) {
                 $errors[] = "linea $n: natura must be empty when aliquota_iva is not 0 (SdI check 00401)";
             }
+        }
+
+        $hasLineRitenuta = array_reduce(
+            is_array($f['linee'] ?? null) ? $f['linee'] : [],
+            fn ($carry, $l) => $carry || !empty($l['ritenuta']),
+            false
+        );
+        if ($hasLineRitenuta && empty($f['ritenuta'])) {
+            $errors[] = "a line has ritenuta=true but the 'ritenuta' block is missing (SdI check 00411)";
+        }
+        if (!empty($f['ritenuta']['tipo']) && !preg_match('/^RT0[1-6]$/', (string) $f['ritenuta']['tipo'])) {
+            $errors[] = "ritenuta.tipo must be RT01…RT06";
+        }
+        if (!empty($f['cassa']['tipo']) && !preg_match('/^TC(0[1-9]|1\d|2[0-2])$/', (string) $f['cassa']['tipo'])) {
+            $errors[] = "cassa.tipo must be TC01…TC22";
         }
         return $errors;
     }

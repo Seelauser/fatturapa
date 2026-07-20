@@ -68,6 +68,9 @@ More input options (see the `XmlBuilder` docblock for the full shape):
 'causale'        => 'Riferimento pratica ...',
 'cedente'        => ['nome' => 'Max', 'cognome' => 'Muster', 'regime_fiscale' => 'RF19', ...], // freelancer/forfettario
 'pagamento'      => ['condizioni' => 'TP02', 'dettagli' => [['modalita' => 'MP05', 'iban' => 'IT60...', 'scadenza' => '2026-08-01']]],
+'ritenuta'       => ['tipo' => 'RT01', 'aliquota' => 20.0, 'causale' => 'A'],   // + 'ritenuta' => true on the lines
+'cassa'          => ['tipo' => 'TC22', 'aliquota' => 4.0, 'aliquota_iva' => 22.0], // cassa previdenziale (auto-added to totals)
+// per line: 'sconto_percentuale' => 10.0 or 'sconto_importo' => 5.0
 ```
 
 Validation is two-layered: `build()` itself checks fields and SdI semantic rules
@@ -84,7 +87,7 @@ $errors = (new XmlBuilder())->validate($xml); // [] when valid
 ```php
 use AlpsFatturapa\NumeratoreService;
 
-$svc = new NumeratoreService($pdo);       // any PDO (MariaDB/MySQL); table configurable
+$svc = new NumeratoreService($pdo);       // MariaDB/MySQL, PostgreSQL or SQLite ≥3.35; table configurable
 $svc->ensureTable();                       // creates `sdi_sequence` if missing
 $numero = $svc->next();                    // "2026/00001", "2026/00002", …
 $numero = $svc->next(2026, 'EXT');         // "2026/00001/EXT" (separate sezionale)
@@ -110,7 +113,18 @@ $result = $pec->sendInvoice($xml, ['progressivo' => '00042']);
 // ['identificativo' => 'IT01234567890_00042.xml', ...]
 ```
 
-SdI receipts arrive back in the PEC inbox; parse the attached XML:
+SdI receipts arrive back in the PEC inbox. Poll it automatically (own IMAP
+client, handles the PEC `postacert.eml` nesting):
+
+```php
+use AlpsFatturapa\Notifications\PecInboxReader;
+
+foreach (PecInboxReader::createFromEnv()->fetchNotifications() as $f) {
+    // $f['filename'], $f['notification'] (SdiNotification)
+}
+```
+
+…or parse a notification XML you already have:
 
 ```php
 use AlpsFatturapa\Notifications\NotificationParser;
@@ -159,13 +173,16 @@ env var; the service refuses requests when `API_KEY` is unset.
 | `POST /fattura/send` | `{ xml, meta? }`              | `{ identificativo, raw }` |
 | `GET  /fattura/status/{id}` | —                      | `{ status, raw }` |
 | `POST /fattura/notifica` | `{ xml }`                 | parsed SdI notification |
+| `GET  /fattura/inbox` | —                            | new SdI notifications from the PEC inbox (IMAP) |
 
 Env: `API_KEY` (required), `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`,
 `DB_PORT`, `SDI_SEQUENCE_TABLE`; transport selection `SDI_TRANSPORT` (`pec` |
 `openapi`, default `openapi`). For `openapi`: `OPENAPI_TOKEN`, `SDI_MODE`
 (`production` disables sandbox). For `pec`: `PEC_ADDRESS`, `PEC_SMTP_HOST`,
 `PEC_SMTP_USERNAME`, `PEC_SMTP_PASSWORD`, `CEDENTE_PIVA`, optional
-`PEC_SDI_ADDRESS` (after SdI assigns it), `PEC_SMTP_PORT`.
+`PEC_SDI_ADDRESS` (after SdI assigns it), `PEC_SMTP_PORT`. Inbox polling:
+`PEC_IMAP_HOST`, optional `PEC_IMAP_PORT` (993), `PEC_IMAP_USERNAME`/`PEC_IMAP_PASSWORD`
+(default to the SMTP credentials).
 
 ## Documentation
 

@@ -6,6 +6,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use AlpsFatturapa\Contracts\SdiTransport;
 use AlpsFatturapa\Notifications\NotificationParser;
+use AlpsFatturapa\Notifications\PecInboxReader;
 use AlpsFatturapa\NumeratoreService;
 use AlpsFatturapa\Transport\OpenapiClient;
 use AlpsFatturapa\Transport\PecTransport;
@@ -121,6 +122,24 @@ $app->post('/fattura/notifica', function (Request $req, Response $res) use ($jso
         ]);
     } catch (\InvalidArgumentException $e) {
         return $json($res, ['error' => $e->getMessage()], 422);
+    }
+});
+
+// GET /fattura/inbox  → poll the PEC inbox (IMAP) for new SdI notifications
+$app->get('/fattura/inbox', function (Request $req, Response $res) use ($json): Response {
+    try {
+        $found = PecInboxReader::createFromEnv()->fetchNotifications();
+        return $json($res, ['notifications' => array_map(static fn (array $f) => [
+            'filename' => $f['filename'],
+            'tipo' => $f['notification']->tipo,
+            'identificativo_sdi' => $f['notification']->identificativoSdi,
+            'nome_file' => $f['notification']->nomeFile,
+            'errori' => $f['notification']->errori,
+            'positive' => $f['notification']->isPositive(),
+            'rejection' => $f['notification']->isRejection(),
+        ], $found)]);
+    } catch (\AlpsFatturapa\Exception\TransportException $e) {
+        return $json($res, ['error' => $e->getMessage()], 502);
     }
 });
 

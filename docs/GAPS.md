@@ -51,10 +51,11 @@ and virtually all PA bodies expect payment data in the invoice.
 - No `DatiOrdineAcquisto` / `CodiceCIG` / `CodiceCUP` — PA bodies routinely refuse invoices without CIG/CUP.
 So despite emitting FPA12, real PA invoicing does not work end to end.
 
-### 7. No ritenuta d'acconto / cassa previdenziale
+### ✅ 7. No ritenuta d'acconto / cassa previdenziale — FIXED in 0.3.0
 Professionals (accountants, engineers, lawyers…) need `DatiRitenuta` and
 `DatiCassaPrevidenziale`. Combined with #4 this rules out the whole
-professional/freelancer segment.
+professional/freelancer segment. *(0.3.0: `ritenuta` + `cassa` blocks with
+auto-computed amounts, riepilogo integration, 00411 coherence check.)*
 
 ### ✅ 8. Wrong default `RiferimentoNormativo` — FIXED in 0.2.0 (per-natura default table)
 Every exempt riepilogo defaults to *"Esente art.10 DPR 633/72"*, which is wrong
@@ -81,18 +82,19 @@ error messages (ideally mapping to SdI error codes).
 User-supplied values aren't checked against `[A-Za-z0-9]{1,10}`; an invalid value
 fails only at XSD/SdI stage.
 
-### 12. Numbering is MariaDB/MySQL-only
+### ✅ 12. Numbering is MariaDB/MySQL-only — FIXED in 0.3.0 (PostgreSQL + SQLite ≥3.35 via UPSERT…RETURNING)
 `LAST_INSERT_ID()` upsert doesn't work on PostgreSQL/SQLite. Fine for the current
 deployment, a real limitation for a general-purpose package (Laravel world is
-heavily Postgres). Also `date('Y')` uses server TZ (edge case around New Year).
+heavily Postgres). Remaining nit: `date('Y')` uses server TZ (edge case around New Year).
 
 ## Missing product surface (not bugs)
 
 - **No ciclo passivo** — receiving supplier invoices from SdI is absent entirely.
 - **Notification handling** — ✅ partially covered in 0.2.0: `NotificationParser`
   parses all six receipt types offline and `/fattura/status/{id}` +
-  `/fattura/notifica` exist; still missing: webhook ingestion, IMAP polling of
-  the PEC inbox, and a persisted invoice-lifecycle state model.
+  `/fattura/notifica` exist; ✅ IMAP polling of the PEC inbox shipped in
+  0.3.0 (`PecInboxReader`, own IMAP client + PEC-envelope MIME parsing); still
+  missing: provider webhook ingestion and a persisted invoice-lifecycle state model.
 - **Transports** — ✅ PEC transport added in 0.2.0 (self-sufficient channel);
   Aruba / A-Cube / Invoicetronic / direct-SDICoop adapters still open.
 - **No digital signature (CAdES/XAdES)** — fine while the provider signs, but must
@@ -101,16 +103,17 @@ heavily Postgres). Also `date('Y')` uses server TZ (edge case around New Year).
   Entrate service ("Fatture e Corrispettivi") is the recommended no-dependency
   path; provider-side storage remains optional.
 - **No PDF rendering** (foglio di stile / human-readable copy) — commonly expected.
-- **Other XML blocks not supported:** `ScontoMaggiorazione` (line and document
-  level), `Allegati`, `DatiDDT`, `DatiContratto`, `Arrotondamento`,
+- **Other XML blocks not supported:** `ScontoMaggiorazione` at document level
+  (✅ line level added in 0.3.0), `Allegati`, `DatiDDT`, `DatiContratto`, `Arrotondamento`,
   `AltriDatiGestionali`, `DatiVeicoli`, stabile organizzazione / rappresentante
   fiscale, multiple bodies per file (lotto di fatture). (`Causale` ✅ added in 0.2.0.)
 
 ## Test coverage gaps
 
-0.2.0 brought the suite to 28 tests incl. XSD validation of every built invoice
-(when the schema is vendored), builder edge cases, `NotificationParser`, and
-`PecTransport` (mocked SMTP). Still missing: `NumeratoreService` tests (needs a
-DB fixture or SQLite-compatible rewrite), `OpenapiClient` tests with a mocked
-Guzzle handler (retry/backoff, 4xx vs 5xx, token scrubbing), `SmtpClient`
-protocol tests, and microservice endpoint tests (auth middleware, routes).
+0.3.0 brought the suite to 39 tests incl. XSD validation of every built invoice
+(when the schema is vendored), builder edge cases, `NotificationParser`,
+`PecTransport` (mocked SMTP), `NumeratoreService` on SQLite, and
+`MimeAttachmentExtractor` with a nested PEC message. Still missing:
+`OpenapiClient` tests with a mocked Guzzle handler (retry/backoff, 4xx vs 5xx,
+token scrubbing), `SmtpClient`/`ImapClient` protocol tests, and microservice
+endpoint tests (auth middleware, routes).
