@@ -114,8 +114,9 @@ send+receive as one product.
 - ✅ **v0.3 — professionals + closed PEC loop** (shipped): ritenuta d'acconto,
   cassa previdenziale, line discounts, PEC inbox polling (own IMAP client +
   PEC-envelope MIME parsing), portable numbering (PostgreSQL/SQLite).
-- **v0.4 — lifecycle**: notification objects, webhook + polling on the contract,
-  status endpoint in the microservice, Invoicetronic + Aruba adapters.
+- ✅ **v0.4 — lifecycle + ciclo passivo + rendering** (shipped): `InvoiceStore`
+  state machine, incoming-invoice collection from the PEC inbox (p7m unwrap +
+  parser), HTML rendering via the official foglio di stile.
 - **v0.5 — distribution**: Laravel bridge (facade, config, queue-friendly
   webhooks), Packagist publication, CiviCRM extension skeleton.
 - **v1.0 — ciclo passivo** + PDF rendering via the AdE foglio di stile.

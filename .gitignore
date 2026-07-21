@@ -3,3 +3,4 @@
 composer.lock
 /resources/xsd/*.xsd
 .env
+/resources/xsl/*.xsl

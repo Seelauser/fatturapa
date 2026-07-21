@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.0 — 2026-07-20
+
+Lifecycle, ciclo passivo, and rendering — the full send-and-receive cycle now
+runs end to end with only a PEC mailbox.
+
+### Added
+- **Invoice lifecycle store** (`Lifecycle\InvoiceStore`, portable PDO —
+  MySQL/PostgreSQL/SQLite): built → sent → delivered / rejected / undelivered
+  (+ PA: accepted / refused / expired). `applyNotification()` matches SdI
+  receipts to stored invoices by transmission filename and records scarto
+  errors; `listByStatus()` for dashboards/retry queues.
+- **Ciclo passivo**: `Passive\P7mExtractor` unwraps CAdES `.xml.p7m` files
+  (raw DER and base64; signature already verified by SdI) and
+  `Passive\ReceivedInvoiceParser` turns any received FatturaPA XML into a
+  bookkeeping-ready array (fornitore, totals, lines, riepiloghi, payment
+  deadlines/IBAN). `PecInboxReader::fetchAll()` now classifies inbox content
+  into notifications **and** incoming invoices; `GET /fattura/inbox` returns both.
+- **Human-readable rendering** (`Render\StylesheetRenderer`): FatturaPA →
+  HTML via the official AdE *foglio di stile* XSL (place it in
+  `resources/xsl/`, not vendored; requires php-xsl). New route
+  `POST /fattura/render`.
+
 ## 0.3.0 — 2026-07-20
 
 Professionals, portable numbering, and the closed PEC loop — still zero

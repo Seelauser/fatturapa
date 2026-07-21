@@ -125,21 +125,42 @@ $app->post('/fattura/notifica', function (Request $req, Response $res) use ($jso
     }
 });
 
-// GET /fattura/inbox  → poll the PEC inbox (IMAP) for new SdI notifications
+// GET /fattura/inbox  → poll the PEC inbox (IMAP): SdI notifications + incoming invoices
 $app->get('/fattura/inbox', function (Request $req, Response $res) use ($json): Response {
     try {
-        $found = PecInboxReader::createFromEnv()->fetchNotifications();
-        return $json($res, ['notifications' => array_map(static fn (array $f) => [
-            'filename' => $f['filename'],
-            'tipo' => $f['notification']->tipo,
-            'identificativo_sdi' => $f['notification']->identificativoSdi,
-            'nome_file' => $f['notification']->nomeFile,
-            'errori' => $f['notification']->errori,
-            'positive' => $f['notification']->isPositive(),
-            'rejection' => $f['notification']->isRejection(),
-        ], $found)]);
+        $found = PecInboxReader::createFromEnv()->fetchAll();
+        return $json($res, [
+            'notifications' => array_map(static fn (array $f) => [
+                'filename' => $f['filename'],
+                'tipo' => $f['notification']->tipo,
+                'identificativo_sdi' => $f['notification']->identificativoSdi,
+                'nome_file' => $f['notification']->nomeFile,
+                'errori' => $f['notification']->errori,
+                'positive' => $f['notification']->isPositive(),
+                'rejection' => $f['notification']->isRejection(),
+            ], $found['notifications']),
+            'invoices' => array_map(static fn (array $f) => [
+                'filename' => $f['filename'],
+                'invoice' => $f['invoice'],
+            ], $found['invoices']),
+        ]);
     } catch (\AlpsFatturapa\Exception\TransportException $e) {
         return $json($res, ['error' => $e->getMessage()], 502);
+    }
+});
+
+// POST /fattura/render  { xml }  → human-readable HTML via the official foglio di stile
+$app->post('/fattura/render', function (Request $req, Response $res) use ($json): Response {
+    $body = (array) $req->getParsedBody();
+    if (empty($body['xml'])) {
+        return $json($res, ['error' => 'missing xml'], 422);
+    }
+    try {
+        $html = (new \AlpsFatturapa\Render\StylesheetRenderer())->renderHtml((string) $body['xml']);
+        $res->getBody()->write($html);
+        return $res->withHeader('Content-Type', 'text/html; charset=utf-8');
+    } catch (\RuntimeException $e) {
+        return $json($res, ['error' => $e->getMessage()], 503);
     }
 });
 

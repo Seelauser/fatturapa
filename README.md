@@ -124,6 +124,12 @@ foreach (PecInboxReader::createFromEnv()->fetchNotifications() as $f) {
 }
 ```
 
+`fetchAll()` additionally returns incoming **purchase invoices** (ciclo
+passivo, `.xml` and signed `.xml.p7m`) already parsed into a bookkeeping-ready
+array — see `Passive\ReceivedInvoiceParser` and `Passive\P7mExtractor`. Track
+outbound state with `Lifecycle\InvoiceStore` (built → sent → delivered/rejected/…,
+`applyNotification()` closes the loop automatically).
+
 …or parse a notification XML you already have:
 
 ```php
@@ -173,7 +179,8 @@ env var; the service refuses requests when `API_KEY` is unset.
 | `POST /fattura/send` | `{ xml, meta? }`              | `{ identificativo, raw }` |
 | `GET  /fattura/status/{id}` | —                      | `{ status, raw }` |
 | `POST /fattura/notifica` | `{ xml }`                 | parsed SdI notification |
-| `GET  /fattura/inbox` | —                            | new SdI notifications from the PEC inbox (IMAP) |
+| `GET  /fattura/inbox` | —                            | new SdI notifications **and incoming invoices** from the PEC inbox (IMAP) |
+| `POST /fattura/render` | `{ xml }`                   | human-readable HTML (official foglio di stile; needs php-xsl + XSL in `resources/xsl/`) |
 
 Env: `API_KEY` (required), `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`,
 `DB_PORT`, `SDI_SEQUENCE_TABLE`; transport selection `SDI_TRANSPORT` (`pec` |

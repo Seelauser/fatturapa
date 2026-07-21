@@ -89,12 +89,14 @@ heavily Postgres). Remaining nit: `date('Y')` uses server TZ (edge case around N
 
 ## Missing product surface (not bugs)
 
-- **No ciclo passivo** — receiving supplier invoices from SdI is absent entirely.
+- **Ciclo passivo** — ✅ shipped in 0.4.0 for the PEC channel: incoming `.xml`
+  and `.xml.p7m` invoices are collected from the inbox, p7m-unwrapped, and
+  parsed into bookkeeping arrays. Provider-channel receiving (webhooks) still open.
 - **Notification handling** — ✅ partially covered in 0.2.0: `NotificationParser`
   parses all six receipt types offline and `/fattura/status/{id}` +
   `/fattura/notifica` exist; ✅ IMAP polling of the PEC inbox shipped in
-  0.3.0 (`PecInboxReader`, own IMAP client + PEC-envelope MIME parsing); still
-  missing: provider webhook ingestion and a persisted invoice-lifecycle state model.
+  0.3.0 (`PecInboxReader`, own IMAP client + PEC-envelope MIME parsing); ✅ persisted lifecycle state model shipped in 0.4.0 (`InvoiceStore`); still
+  missing: provider webhook ingestion.
 - **Transports** — ✅ PEC transport added in 0.2.0 (self-sufficient channel);
   Aruba / A-Cube / Invoicetronic / direct-SDICoop adapters still open.
 - **No digital signature (CAdES/XAdES)** — fine while the provider signs, but must
@@ -102,7 +104,8 @@ heavily Postgres). Remaining nit: `date('Y')` uses server TZ (edge case around N
 - **Conservazione sostitutiva** — ✅ documented in 0.2.0: the free Agenzia delle
   Entrate service ("Fatture e Corrispettivi") is the recommended no-dependency
   path; provider-side storage remains optional.
-- **No PDF rendering** (foglio di stile / human-readable copy) — commonly expected.
+- **Rendering** — ✅ HTML via the official foglio di stile shipped in 0.4.0
+  (`StylesheetRenderer`); PDF output (wkhtmltopdf/dompdf on top of it) still open.
 - **Other XML blocks not supported:** `ScontoMaggiorazione` at document level
   (✅ line level added in 0.3.0), `Allegati`, `DatiDDT`, `DatiContratto`, `Arrotondamento`,
   `AltriDatiGestionali`, `DatiVeicoli`, stabile organizzazione / rappresentante
