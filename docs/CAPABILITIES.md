@@ -1,81 +1,83 @@
-# Capabilities — what works today (plug and play)
+# Funzionalità — cosa funziona oggi (plug and play)
 
-> Status audit of `alpsplanner/fatturapa`, verified by running the code on PHP 8.3
-> (tests, XSD validation against the official schema, and a live MariaDB
-> concurrency test). Updated for **0.2.0** (see [CHANGELOG](../CHANGELOG.md)):
-> XSD 1.2.3, TD01–TD29, bollo, split payment, CIG/CUP, DatiPagamento, person
-> cedente, field-level validation, **PEC transport** (self-sufficient, no
-> third-party service), SdI notification parser, API-key-protected microservice.
-> Companion documents: [GAPS.md](GAPS.md) for what is missing,
-> [ROADMAP.md](ROADMAP.md) for where to take the package.
+🇮🇹 Italiano · 🇬🇧 [English](CAPABILITIES.en.md) · 🇩🇪 [Deutsch](CAPABILITIES.de.md)
 
-## Verified working
+> Audit dello stato di `alpsplanner/fatturapa`, verificato eseguendo il codice su PHP 8.3
+> (test, validazione XSD contro lo schema ufficiale e un test di concorrenza
+> live su MariaDB). Aggiornato alla **0.2.0** (vedi [CHANGELOG](../CHANGELOG.md)):
+> XSD 1.2.3, TD01–TD29, bollo, split payment, CIG/CUP, DatiPagamento, cedente
+> persona fisica, validazione a livello di campo, **trasporto PEC** (autosufficiente,
+> nessun servizio di terze parti), parser delle notifiche SdI, microservizio protetto
+> da API key. Documenti complementari: [GAPS.md](GAPS.md) per ciò che manca,
+> [ROADMAP.md](ROADMAP.md) per la direzione da dare al pacchetto.
 
-### 1. FatturaPA XML building (`XmlBuilder`)
+## Funzionamento verificato
 
-`build()` produces XML that **validates against the official
-`Schema_del_file_xml_FatturaPA_v1.2.2.xsd`** from fatturapa.gov.it for all three
-supported archetypes:
+### 1. Generazione XML FatturaPA (`XmlBuilder`)
 
-| Case | Formato | Verified |
+`build()` produce XML che **valida contro lo schema ufficiale
+`Schema_del_file_xml_FatturaPA_v1.2.2.xsd`** di fatturapa.gov.it per tutti e tre
+gli archetipi supportati:
+
+| Caso | Formato | Verificato |
 |---|---|---|
-| B2C, private person with codice fiscale, exempt line (Natura N4) | FPR12 | ✅ XSD-valid |
-| B2B, company with partita IVA + codice destinatario, 22% VAT | FPR12 | ✅ XSD-valid |
-| PA, public body with 6-char codice destinatario | FPA12 | ✅ XSD-valid |
+| B2C, persona fisica con codice fiscale, riga esente (Natura N4) | FPR12 | ✅ valido XSD |
+| B2B, azienda con partita IVA + codice destinatario, IVA 22% | FPR12 | ✅ valido XSD |
+| PA, ente pubblico con codice destinatario di 6 caratteri | FPA12 | ✅ valido XSD |
 
-Also verified:
+Verificato inoltre:
 
-- **Escaping** — `&`, `<`, `>` in descriptions/names survive round-trip (`htmlspecialchars(ENT_XML1)` before `createElement`).
-- **VAT math** — per-(aliquota, natura) `DatiRiepilogo` aggregation, `Imposta` and `ImportoTotaleDocumento` computed correctly (covered by unit tests, 7/7 green).
-- **CodiceDestinatario defaults** — `0000000` for FPR12, `999999` for FPA12; `PECDestinatario` emitted only in the legal case (FPR12 + `0000000` + pec present).
-- **Negative lines** (discount/refund as negative price) pass XSD validation.
-- Input is a plain PHP array — no framework types, only `ext-dom` needed. Genuinely drop-in for CiviCRM, Laravel, Symfony or plain PHP.
+- **Escaping** — `&`, `<`, `>` in descrizioni/nomi sopravvivono al round-trip (`htmlspecialchars(ENT_XML1)` prima di `createElement`).
+- **Calcolo IVA** — aggregazione `DatiRiepilogo` per (aliquota, natura), `Imposta` e `ImportoTotaleDocumento` calcolati correttamente (coperto da unit test, 7/7 verdi).
+- **Default di CodiceDestinatario** — `0000000` per FPR12, `999999` per FPA12; `PECDestinatario` emesso solo nel caso previsto dalla norma (FPR12 + `0000000` + pec presente).
+- **Righe negative** (sconto/rimborso come prezzo negativo) superano la validazione XSD.
+- L'input è un semplice array PHP — nessun tipo di framework, serve solo `ext-dom`. Realmente drop-in per CiviCRM, Laravel, Symfony o PHP puro.
 
-Supported input surface (see class docblock): `tipo_documento` (`fattura_b2b` | `fattura_b2c` | `fattura_pa`), `numero`, `data`, `progressivo_invio` (auto-random if absent), cedente (company only), cessionario (company or nome/cognome person), lines with `descrizione`/`quantita`/`prezzo_unitario`/`aliquota_iva`/`natura`, per-line `riferimento_normativo` fallback on exempt riepiloghi.
+Superficie di input supportata (vedi docblock della classe): `tipo_documento` (`fattura_b2b` | `fattura_b2c` | `fattura_pa`), `numero`, `data`, `progressivo_invio` (auto-random se assente), cedente (solo azienda), cessionario (azienda o persona fisica con nome/cognome), righe con `descrizione`/`quantita`/`prezzo_unitario`/`aliquota_iva`/`natura`, fallback per riga di `riferimento_normativo` sui riepiloghi esenti.
 
-### 2. XSD validation (`XmlBuilder::validate()`)
+### 2. Validazione XSD (`XmlBuilder::validate()`)
 
-Works once the official XSD is placed in `resources/xsd/FatturaPA_v1.2.2.xsd`
-(deliberately not vendored — see `resources/xsd/README.md`). Returns a clean
-`string[]` of libxml errors; empty array = valid. Without the file it degrades to a
-single informational message instead of failing.
+Funziona una volta collocato lo XSD ufficiale in `resources/xsd/FatturaPA_v1.2.2.xsd`
+(deliberatamente non incluso nel pacchetto — vedi `resources/xsd/README.md`). Restituisce un
+`string[]` pulito di errori libxml; array vuoto = valido. Senza il file degrada a un
+singolo messaggio informativo invece di fallire.
 
-### 3. Sequential numbering (`NumeratoreService`)
+### 3. Numerazione progressiva (`NumeratoreService`)
 
-- Format `YYYY/00042` and `YYYY/00042/SEZ` per year + sezionale.
-- **Concurrency verified live**: 20 parallel processes × 10 increments against
-  MariaDB produced exactly 200 with no gaps or duplicates (the
-  `INSERT IGNORE` seed + `UPDATE … LAST_INSERT_ID()` upsert is race-free).
-- `ensureTable()` bootstraps the table; table name is injection-guarded.
-- Works with any injected PDO — **MariaDB/MySQL only** (uses `LAST_INSERT_ID()`).
+- Formato `YYYY/00042` e `YYYY/00042/SEZ` per anno + sezionale.
+- **Concorrenza verificata live**: 20 processi paralleli × 10 incrementi contro
+  MariaDB hanno prodotto esattamente 200 senza buchi né duplicati (l'upsert
+  `INSERT IGNORE` seed + `UPDATE … LAST_INSERT_ID()` è privo di race condition).
+- `ensureTable()` inizializza la tabella; il nome tabella è protetto contro injection.
+- Funziona con qualsiasi PDO iniettato — **solo MariaDB/MySQL** (usa `LAST_INSERT_ID()`).
 
-### 4. SdI transport (`OpenapiClient` + `SdiTransport` contract)
+### 4. Trasporto SdI (`OpenapiClient` + contratto `SdiTransport`)
 
-- Clean `SdiTransport` interface (`sendInvoice`, `getInvoiceStatus`) so other
-  providers can be plugged in without touching the core.
-- Openapi.com adapter: bearer auth, sandbox/production base URLs, 3-attempt
-  exponential backoff on 5xx/network errors, immediate failure on 4xx, injectable
-  Guzzle client + sleeper for tests, and a logger that scrubs the bearer token from
-  messages and bodies.
-- Sending is **never automatic** — a deliberate design guard for an irreversible
-  fiscal operation.
+- Interfaccia `SdiTransport` pulita (`sendInvoice`, `getInvoiceStatus`) che permette
+  di collegare altri provider senza toccare il core.
+- Adapter Openapi.com: autenticazione bearer, base URL sandbox/produzione, backoff
+  esponenziale a 3 tentativi su errori 5xx/di rete, fallimento immediato su 4xx, client
+  Guzzle + sleeper iniettabili per i test, e un logger che rimuove il bearer token da
+  messaggi e body.
+- L'invio non è **mai automatico** — una salvaguardia progettuale deliberata per
+  un'operazione fiscale irreversibile.
 
-### 5. HTTP microservice (`public/index.php`)
+### 5. Microservizio HTTP (`public/index.php`)
 
-Slim 4 app exposing `GET /health`, `POST /fattura/build`, `POST /fattura/numero`,
-`POST /fattura/send`; env-driven DB + token config; Dockerfile builds a
-non-root Alpine image. Suitable as an internal sidecar for non-PHP stacks.
+App Slim 4 che espone `GET /health`, `POST /fattura/build`, `POST /fattura/numero`,
+`POST /fattura/send`; configurazione DB + token via variabili d'ambiente; il Dockerfile
+produce un'immagine Alpine non-root. Adatto come sidecar interno per stack non-PHP.
 
-> ⚠️ The microservice currently has **no authentication** — see GAPS.md #1. Do not
-> expose it beyond localhost/a private network.
+> ⚠️ Il microservizio attualmente **non ha autenticazione** — vedi GAPS.md #1. Non
+> esporlo oltre localhost/una rete privata.
 
 ### 6. Packaging
 
-`composer.json` is publish-ready for Packagist: PSR-4, PHP ^8.2, core deps only
-`ext-dom`/`ext-libxml`, HTTP/transport extras in `require-dev` + `suggest`, MIT
-license, tests wired to `composer test`.
+`composer.json` è pronto per la pubblicazione su Packagist: PSR-4, PHP ^8.2, dipendenze
+core limitate a `ext-dom`/`ext-libxml`, extra HTTP/trasporto in `require-dev` + `suggest`,
+licenza MIT, test collegati a `composer test`.
 
-## Practical "plug and play" recipes that work right now
+## Ricette "plug and play" pratiche che funzionano già ora
 
 ```php
 // 1. Build + validate + number, no service, any PHP app:
@@ -89,11 +91,11 @@ $res = OpenapiClient::createFromEnv(testMode: true)->sendInvoice($xml);
 // 3. Non-PHP stack: run the Docker image, POST JSON to /fattura/build.
 ```
 
-## What "works" does NOT yet mean
+## Cosa "funziona" NON significa ancora
 
-XSD validity ≠ SdI acceptance. SdI applies ~100 additional semantic checks
-(codes 00400–00476: coherence of totals, natura vs aliquota, codice fiscale
-checksums, duplicate numbers, …) and the fiscal correctness of bollo, split
-payment, ritenute etc. is the caller's responsibility. The current builder covers
-the **TD01 immediate-invoice happy path only** — everything else is catalogued in
+Validità XSD ≠ accettazione da parte dello SdI. Lo SdI applica circa 100 controlli
+semantici aggiuntivi (codici 00400–00476: coerenza dei totali, natura vs aliquota,
+checksum del codice fiscale, numeri duplicati, …) e la correttezza fiscale di bollo,
+split payment, ritenute ecc. resta responsabilità del chiamante. Il builder attuale copre
+**solo l'happy path della fattura immediata TD01** — tutto il resto è catalogato in
 [GAPS.md](GAPS.md).

@@ -1,130 +1,139 @@
-# Roadmap — market positioning and platform strategy
+# Roadmap — posizionamento di mercato e strategia di piattaforma
 
-> Based on a deep market scan (2026-07-20) of the Italian e-invoicing ecosystem:
-> SdI API providers, competing PHP libraries, compliance requirements
-> (specifiche tecniche 1.9/1.9.1), and platform integration demand.
-> Companion documents: [CAPABILITIES.md](CAPABILITIES.md), [GAPS.md](GAPS.md).
+🇮🇹 Italiano · 🇬🇧 [English](ROADMAP.en.md) · 🇩🇪 [Deutsch](ROADMAP.de.md)
 
-## Where this package can win
+> Basata su un'analisi approfondita di mercato (2026-07-20) dell'ecosistema italiano
+> della fatturazione elettronica: provider API SdI, librerie PHP concorrenti,
+> requisiti di conformità (specifiche tecniche 1.9/1.9.1) e domanda di integrazione
+> nelle piattaforme. Documenti complementari: [CAPABILITIES.md](CAPABILITIES.md), [GAPS.md](GAPS.md).
 
-The PHP ecosystem splits into three mutually exclusive camps, and none covers the
-full picture:
+## Dove questo pacchetto può vincere
 
-1. **Pure XML builders/validators, no transport** — `deved/fattura-elettronica`
-   (84★, 137k downloads, active), `fatturaelettronicaphp/fattura-elettronica`
-   (51★, 63k, slowing), `slam/php-validatore-fattura-elettronica` (validation only).
-2. **Direct-SdI plumbing requiring government accreditation** — `taocomp/php-e-invoice-it`
-   (dormant since 2022), `italia/fatturapa-php-sdk` (abandoned 2018).
-3. **Single-vendor SaaS clients with the transport hard-wired** — Fattura24,
-   Invoicetronic, fattura-elettronica-api.it SDKs.
+L'ecosistema PHP si divide in tre campi mutuamente esclusivi, e nessuno copre il
+quadro completo:
 
-**Nobody offers builder + validation + swappable transport.** That is exactly the
-architecture this package already has (`SdiTransport` interface). Competing with
-deved on XML generation alone is a losing move; the durable differentiators are:
+1. **Puri builder/validatori XML, senza trasporto** — `deved/fattura-elettronica`
+   (84★, 137k download, attivo), `fatturaelettronicaphp/fattura-elettronica`
+   (51★, 63k, in rallentamento), `slam/php-validatore-fattura-elettronica` (solo validazione).
+2. **Plumbing SdI diretto che richiede l'accreditamento governativo** — `taocomp/php-e-invoice-it`
+   (dormiente dal 2022), `italia/fatturapa-php-sdk` (abbandonato nel 2018).
+3. **Client SaaS mono-vendor con il trasporto cablato** — gli SDK di Fattura24,
+   Invoicetronic, fattura-elettronica-api.it.
 
-- **Transport abstraction with multiple adapters** (first-to-market: Openapi.com
-  has no official PHP SDK).
-- **SdI notification lifecycle** (RC/NS/MC + PA-only NE/DT/AT) normalized across
-  providers — no PHP package does this.
-- **Laravel bridge** — the existing Laravel wrappers total <100 downloads and are
-  dead; Italian PHP agencies are heavily Laravel. Zero competition.
-- **CiviCRM extension** — no FatturaPA extension exists at all despite Italian
-  nonprofits being under the mandate since 2019/2024. Greenfield, and it is this
-  package's home turf (AlpsPlanner/associations).
-- Being the embeddable core for the fragmented plugin market: WooCommerce Italian
-  e-invoice plugins (4,000/800/400… active installs), PrestaShop modules sold at
-  €120–168, Magento modules — each currently hand-rolls XML or hard-wires one SaaS.
+**Nessuno offre builder + validazione + trasporto intercambiabile.** È esattamente
+l'architettura che questo pacchetto ha già (interfaccia `SdiTransport`). Competere
+con deved sulla sola generazione XML è una mossa perdente; i differenziatori
+durevoli sono:
 
-## Transport adapters — priority order
+- **Astrazione del trasporto con più adapter** (first-to-market: Openapi.com
+  non ha un SDK PHP ufficiale).
+- **Ciclo di vita delle notifiche SdI** (RC/NS/MC + NE/DT/AT solo PA) normalizzato
+  tra i provider — nessun pacchetto PHP lo fa.
+- **Bridge Laravel** — i wrapper Laravel esistenti totalizzano <100 download e sono
+  morti; le agenzie PHP italiane sono fortemente su Laravel. Concorrenza zero.
+- **Estensione CiviCRM** — non esiste alcuna estensione FatturaPA nonostante il
+  non profit italiano sia sotto obbligo dal 2019/2024. Terreno vergine, ed è il
+  campo di casa di questo pacchetto (AlpsPlanner/associazioni).
+- Essere il core integrabile per il frammentato mercato dei plugin: plugin
+  WooCommerce per la fattura elettronica italiana (4.000/800/400… installazioni
+  attive), moduli PrestaShop venduti a €120–168, moduli Magento — ognuno oggi
+  genera XML a mano o cabla un singolo SaaS.
 
-| Priority | Provider | Why | Notes |
+## Adapter di trasporto — ordine di priorità
+
+| Priorità | Provider | Perché | Note |
 |---|---|---|---|
-| ✅ done | **Openapi.com** | Raw XML in, pay-per-use (€0.022–0.07/invoice), sandbox, open docs | Signature (€0.09) and legal storage (€0.105) are separate endpoint variants (`/invoices_signature`, `/invoices_legal_storage`) — expose as options |
-| 1 | **Invoicetronic** | Raw XML, €0.02–0.10/tx, free permanent sandbox, API-key auth, open docs | No conservazione offering — document it |
-| 2 | **Aruba** | Raw XML (`/invoice/upload` auto-signs, `/uploadSigned` for p7m), conservazione included from €29.90/yr | OAuth2 password grant, 30-min tokens, ~30 uploads/min rate limit; full API automation is the ~€600/yr Premium tier |
-| 3 | **A-Cube** | Developer-first, JWT (24h), webhooks with secret token, Legal Storage API | Sales-gated pricing |
-| 4 | **Fatture in Cloud** | Huge install base (TeamSystem) | ⚠️ **Cannot accept external XML** — adapter must map the invoice array to their document model instead of sending built XML. Different adapter shape: `DocumentModelTransport` |
-| ✅ done | **PEC channel** | **Self-sufficiency requirement: no third-party service, only your own PEC mailbox** | Shipped in 0.2.0 (`PecTransport` + own `SmtpClient`); async email, ≤5 MB/invoice; conservazione via the free AdE service; B2B needs no signature |
-| next (independence track) | **Direct SDICoop** | Free per-invoice, fully independent | SOAP+MTOM, mutual-TLS certs from Sogei, accreditation ceremony, you must sign (CAdES/XAdES) and archive yourself — the end-state of the "build it ourselves" strategy |
-| skip | Zucchetti Digital Hub, TS Digital/Agyo, InfoCert | Docs behind sales/NDA — impossible to maintain an open-source adapter | Their users can implement `SdiTransport` privately |
+| ✅ fatto | **Openapi.com** | XML grezzo in ingresso, pay-per-use (€0,022–0,07/fattura), sandbox, documentazione aperta | Firma (€0,09) e conservazione a norma (€0,105) sono varianti di endpoint separate (`/invoices_signature`, `/invoices_legal_storage`) — esporle come opzioni |
+| 1 | **Invoicetronic** | XML grezzo, €0,02–0,10/tx, sandbox permanente gratuita, autenticazione API key, documentazione aperta | Nessuna offerta di conservazione — documentarlo |
+| 2 | **Aruba** | XML grezzo (`/invoice/upload` firma automaticamente, `/uploadSigned` per p7m), conservazione inclusa da €29,90/anno | OAuth2 password grant, token da 30 min, rate limit ~30 upload/min; l'automazione API completa è il tier Premium da ~€600/anno |
+| 3 | **A-Cube** | Developer-first, JWT (24h), webhook con secret token, Legal Storage API | Prezzi solo tramite reparto vendite |
+| 4 | **Fatture in Cloud** | Enorme base installata (TeamSystem) | ⚠️ **Non può accettare XML esterno** — l'adapter deve mappare l'array della fattura sul loro modello documentale invece di inviare l'XML generato. Forma di adapter diversa: `DocumentModelTransport` |
+| ✅ fatto | **Canale PEC** | **Requisito di autosufficienza: nessun servizio di terze parti, solo la propria casella PEC** | Rilasciato in 0.2.0 (`PecTransport` + `SmtpClient` proprio); email asincrona, ≤5 MB/fattura; conservazione tramite il servizio gratuito AdE; il B2B non richiede firma |
+| prossimo (traccia indipendenza) | **SDICoop diretto** | Gratis per fattura, totalmente indipendente | SOAP+MTOM, certificati mutual-TLS da Sogei, cerimonia di accreditamento, firma (CAdES/XAdES) e archiviazione in proprio — lo stato finale della strategia "costruiamocelo da soli" |
+| saltare | Zucchetti Digital Hub, TS Digital/Agyo, InfoCert | Documentazione dietro vendite/NDA — impossibile mantenere un adapter open source | I loro utenti possono implementare `SdiTransport` privatamente |
 
-Design implications from the provider survey:
+Implicazioni progettuali emerse dal censimento dei provider:
 
-- **Credential diversity** (static token / OAuth2 / JWT login / API key / mTLS / PEC)
-  → introduce a small credential-provider abstraction per adapter.
-- **Capability flags** on the interface: `supportsSignature()`,
-  `supportsLegalStorage()`, `acceptsRawXml()` — signature and conservazione are
-  adapter capabilities, not givens.
-- **Webhook quirks to normalize**: Openapi callback config *overwrites* on every
-  call; Fatture in Cloud webhooks carry only the document ID (re-fetch needed);
-  Aruba can push to callbacks *you* host; A-Cube authenticates with a secret token.
+- **Diversità di credenziali** (token statico / OAuth2 / login JWT / API key / mTLS / PEC)
+  → introdurre una piccola astrazione credential-provider per adapter.
+- **Capability flag sull'interfaccia**: `supportsSignature()`,
+  `supportsLegalStorage()`, `acceptsRawXml()` — firma e conservazione sono
+  capacità dell'adapter, non scontate.
+- **Stranezze dei webhook da normalizzare**: la configurazione callback di Openapi
+  *sovrascrive* a ogni chiamata; i webhook di Fatture in Cloud portano solo l'ID del
+  documento (serve un re-fetch); Aruba può fare push verso callback ospitati da *voi*;
+  A-Cube autentica con un secret token.
 
-## Compliance backlog (spec-driven)
+## Backlog di conformità (guidato dalle specifiche)
 
-Target: **XSD 1.2.3 / specifiche tecniche 1.9.1** (current since 1 April 2025 /
-15 May 2026). Concretely:
+Target: **XSD 1.2.3 / specifiche tecniche 1.9.1** (in vigore dal 1° aprile 2025 /
+15 maggio 2026). In concreto:
 
-1. **Enums as first-class constants** with validation: TipoDocumento TD01–TD09,
-   TD16–TD29 (TD29 new 2025); RegimeFiscale RF01–RF20 (RF20 new); Natura N1,
-   N2.1–N2.2, N3.1–N3.6, N4, N5, N6.1–N6.9, N7 (sub-codes mandatory since 2021);
+1. **Enum come costanti di prima classe** con validazione: TipoDocumento TD01–TD09,
+   TD16–TD29 (TD29 nuovo 2025); RegimeFiscale RF01–RF20 (RF20 nuovo); Natura N1,
+   N2.1–N2.2, N3.1–N3.6, N4, N5, N6.1–N6.9, N7 (sotto-codici obbligatori dal 2021);
    ModalitaPagamento MP01–MP23; TipoRitenuta RT01–RT06; TipoCassa TC01–TC22;
    EsigibilitaIVA I/D/S.
-2. **Rule engine for SdI semantic checks** (the 004xx family) — at minimum:
-   Natura required iff aliquota = 0 (and vice versa); `PrezzoTotale = PrezzoUnitario × Quantita`
-   (check 00423 — fix the truncation bug, GAPS #9); ritenuta flag on lines ⇒
-   `DatiRitenuta` present (00411); unique numero per year/tipo (00404).
-3. **DatiBollo** automation: when the non-VAT total (N1/N2.x/N3.x-exempt/N4)
-   exceeds €77.47, emit `BolloVirtuale=SI` (+ `ImportoBollo 2.00`) automatically,
-   with an override.
-4. **Forfettario preset**: RF19 + N2.2 + no ritenuta + bollo rule — as a one-liner
-   profile, since forfettari (mandated since 1 Jan 2024) are the biggest underserved
-   issuer group. Requires supporting `Nome`/`Cognome` for the cedente (GAPS #4).
-5. **PA preset**: FPA12 + `EsigibilitaIVA=S` (split payment) + CIG/CUP in
-   `DatiOrdineAcquisto`/`DatiContratto` (PA cannot legally pay without a required CIG).
-6. **Professionals preset**: `DatiRitenuta` (RT01/RT02, CausalePagamento) +
-   `DatiCassaPrevidenziale` (TC01–TC22, incl. INPS 4% rivalsa edge cases).
-7. **DatiPagamento** (TP01–TP03, MP codes, IBAN, scadenze).
+2. **Motore di regole per i controlli semantici SdI** (la famiglia 004xx) — come minimo:
+   Natura obbligatoria se e solo se aliquota = 0 (e viceversa); `PrezzoTotale = PrezzoUnitario × Quantita`
+   (controllo 00423 — correggere il bug di troncamento, GAPS #9); flag ritenuta sulle righe ⇒
+   `DatiRitenuta` presente (00411); numero univoco per anno/tipo (00404).
+3. Automazione di **DatiBollo**: quando il totale non soggetto a IVA (N1/N2.x/N3.x
+   esenti/N4) supera €77,47, emettere automaticamente `BolloVirtuale=SI`
+   (+ `ImportoBollo 2.00`), con override.
+4. **Preset forfettario**: RF19 + N2.2 + nessuna ritenuta + regola del bollo — come
+   profilo one-liner, dato che i forfettari (obbligati dal 1° gennaio 2024) sono il
+   gruppo di emittenti più numeroso e meno servito. Richiede il supporto di
+   `Nome`/`Cognome` per il cedente (GAPS #4).
+5. **Preset PA**: FPA12 + `EsigibilitaIVA=S` (split payment) + CIG/CUP in
+   `DatiOrdineAcquisto`/`DatiContratto` (la PA non può legalmente pagare senza il CIG
+   quando richiesto).
+6. **Preset professionisti**: `DatiRitenuta` (RT01/RT02, CausalePagamento) +
+   `DatiCassaPrevidenziale` (TC01–TC22, incl. i casi limite della rivalsa INPS 4%).
+7. **DatiPagamento** (TP01–TP03, codici MP, IBAN, scadenze).
 
-## Notification / ciclo passivo backlog
+## Backlog notifiche / ciclo passivo
 
-Send-only covers half the legal mandate — every Italian VAT subject also
-*receives* purchase invoices through SdI, and all surveyed providers sell
-send+receive as one product.
+Il solo invio copre metà dell'obbligo di legge — ogni soggetto IVA italiano
+*riceve* anche le fatture di acquisto tramite SdI, e tutti i provider censiti
+vendono invio+ricezione come un unico prodotto.
 
-1. **Notification taxonomy** as a value object: RC (consegna), NS (scarto, 5-day
-   window, resend with same numero within 5 days), MC (mancata consegna) for the
-   B2B flow; NE/EC01/EC02, DT, AT additionally for the PA flow. Branch on
-   `FormatoTrasmissione`.
-2. **`handleWebhook(payload)` + `pollNotifications()`** on the transport contract
-   (both are needed: webhooks are the dominant mechanism, polling is the fallback).
-3. **Inbound invoice retrieval + p7m unwrap** (ciclo passivo) as a phase-2
-   transport capability.
-4. Persisted **invoice lifecycle state machine** (built → sent → delivered/
-   scartata/mancata-consegna → …) that apps can hook into.
+1. **Tassonomia delle notifiche** come value object: RC (consegna), NS (scarto,
+   finestra di 5 giorni, reinvio con lo stesso numero entro 5 giorni), MC (mancata
+   consegna) per il flusso B2B; NE/EC01/EC02, DT, AT in aggiunta per il flusso PA.
+   Diramazione su `FormatoTrasmissione`.
+2. **`handleWebhook(payload)` + `pollNotifications()`** sul contratto di trasporto
+   (servono entrambi: i webhook sono il meccanismo dominante, il polling è il fallback).
+3. **Recupero delle fatture in ingresso + estrazione p7m** (ciclo passivo) come
+   capacità di trasporto di fase 2.
+4. **Macchina a stati del ciclo di vita della fattura** persistita (generata → inviata →
+   consegnata/scartata/mancata-consegna → …) a cui le applicazioni possano agganciarsi.
 
-## Suggested release plan
+## Piano di rilascio suggerito
 
-> Direction set 2026-07-20: **independence first** — prefer self-built channels
-> (PEC now, direct SDICoop later) over provider adapters; provider adapters stay
-> optional conveniences.
+> Direzione fissata il 2026-07-20: **prima l'indipendenza** — preferire canali
+> costruiti in proprio (PEC ora, SDICoop diretto poi) rispetto agli adapter dei
+> provider; gli adapter dei provider restano comodità opzionali.
 
-- ✅ **v0.2 — trustworthy core** (shipped): microservice auth, XSD 1.2.3, bollo,
-  TD01–TD29, cedente as person, field-level validation, decimal-precision fix,
-  DatiPagamento, split payment + CIG/CUP, **PEC transport + notification parser**.
-- ✅ **v0.3 — professionals + closed PEC loop** (shipped): ritenuta d'acconto,
-  cassa previdenziale, line discounts, PEC inbox polling (own IMAP client +
-  PEC-envelope MIME parsing), portable numbering (PostgreSQL/SQLite).
-- ✅ **v0.4 — lifecycle + ciclo passivo + rendering** (shipped): `InvoiceStore`
-  state machine, incoming-invoice collection from the PEC inbox (p7m unwrap +
-  parser), HTML rendering via the official foglio di stile.
-- **v0.5 — distribution**: Laravel bridge (facade, config, queue-friendly
-  webhooks), Packagist publication, CiviCRM extension skeleton.
-- **v1.0 — ciclo passivo** + PDF rendering via the AdE foglio di stile.
+- ✅ **v0.2 — core affidabile** (rilasciata): autenticazione del microservizio, XSD 1.2.3,
+  bollo, TD01–TD29, cedente come persona fisica, validazione a livello di campo,
+  correzione della precisione decimale, DatiPagamento, split payment + CIG/CUP,
+  **trasporto PEC + parser delle notifiche**.
+- ✅ **v0.3 — professionisti + loop PEC chiuso** (rilasciata): ritenuta d'acconto,
+  cassa previdenziale, sconti di riga, polling della casella PEC (client IMAP
+  proprio + parsing MIME della busta PEC), numerazione portabile (PostgreSQL/SQLite).
+- ✅ **v0.4 — ciclo di vita + ciclo passivo + rendering** (rilasciata): macchina a
+  stati `InvoiceStore`, raccolta delle fatture in ingresso dalla casella PEC
+  (estrazione p7m + parser), rendering HTML tramite il foglio di stile ufficiale.
+- **v0.5 — distribuzione**: bridge Laravel (facade, config, webhook queue-friendly),
+  pubblicazione su Packagist, scheletro dell'estensione CiviCRM.
+- **v1.0 — ciclo passivo** + rendering PDF tramite il foglio di stile AdE.
 
-## Horizon: ViDA / EN 16931
+## Orizzonte: ViDA / EN 16931
 
-FatturaPA/SdI stays authoritative for Italian domestic invoicing through at least
-2030; Italy must converge on the EU standard (EN 16931 / Peppol, ViDA package
-adopted 11 March 2025) by 2035, with intra-EU digital reporting from 1 July 2030.
-No action needed now, but keep the input array a *semantic model* (not an XML
-mirror) so an EN 16931/Peppol BIS serializer can sit beside `XmlBuilder` later.
+FatturaPA/SdI resta il riferimento per la fatturazione domestica italiana almeno
+fino al 2030; l'Italia dovrà convergere sullo standard UE (EN 16931 / Peppol,
+pacchetto ViDA adottato l'11 marzo 2025) entro il 2035, con il digital reporting
+intra-UE dal 1° luglio 2030. Nessuna azione necessaria ora, ma mantenere l'array di
+input come *modello semantico* (non uno specchio dell'XML) così che un serializzatore
+EN 16931/Peppol BIS possa affiancare `XmlBuilder` in futuro.

@@ -195,11 +195,11 @@ Env: `API_KEY` (required), `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD
 
 ## Documentation
 
-- [docs/CAPABILITIES.md](docs/CAPABILITIES.md) — what works today, verified plug-and-play surface
-- [docs/GAPS.md](docs/GAPS.md) — known gaps, bugs, and compliance holes (ordered by severity)
-- [docs/ROADMAP.md](docs/ROADMAP.md) — market positioning, transport-adapter priorities, release plan
+- [docs/CAPABILITIES.md](docs/CAPABILITIES.en.md) — what works today, verified plug-and-play surface
+- [docs/GAPS.md](docs/GAPS.en.md) — known gaps, bugs, and compliance holes (ordered by severity)
+- [docs/ROADMAP.md](docs/ROADMAP.en.md) — market positioning, transport-adapter priorities, release plan
 
-Developer/analysis documents (docs/, CHANGELOG) are maintained in English.
+All docs/ documents are available in Italian (primary), English and German; the CHANGELOG is maintained in English.
 
 ## Test
 

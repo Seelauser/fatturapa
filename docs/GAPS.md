@@ -1,122 +1,136 @@
-# Gaps — what is missing or broken
+# Lacune — cosa manca o non funziona
 
-> Findings from a full source review + live testing (2026-07-20). Ordered by
-> severity. **Updated after the 0.2.0 release** — resolved items are marked ✅
-> and kept for traceability. Companion documents: [CAPABILITIES.md](CAPABILITIES.md),
-> [ROADMAP.md](ROADMAP.md).
+🇮🇹 Italiano · 🇬🇧 [English](GAPS.en.md) · 🇩🇪 [Deutsch](GAPS.de.md)
 
-## Critical
+> Risultati di una revisione completa del codice sorgente + test live (2026-07-20).
+> Ordinati per gravità. **Aggiornato dopo il rilascio 0.2.0** — le voci risolte sono
+> marcate ✅ e mantenute per tracciabilità. Documenti complementari:
+> [CAPABILITIES.md](CAPABILITIES.md), [ROADMAP.md](ROADMAP.md).
 
-### ✅ 1. Microservice has no authentication — FIXED in 0.2.0 (X-Api-Key middleware, refuses to run unconfigured)
-`public/index.php` exposes `POST /fattura/send` — an **irreversible fiscal
-operation** — with no API key, no allowlist, nothing. Anyone who can reach the
-port can transmit invoices with your Openapi token, and `/fattura/numero` lets
-them burn sequence numbers (numbering gaps are a fiscal-audit problem).
-**Fix:** require an `X-Api-Key` header checked against an env var; refuse to start
-`/fattura/send` routing when the key is unset.
+## Critico
 
-### ✅ 2. Legal compliance gap: no `DatiBollo` — FIXED in 0.2.0 (automatic €2 rule > €77.47 + override)
-Exempt/fuori-campo invoices (Natura N2–N6, e.g. the library's own membership-fee
-use case) over **€77.47** legally require the €2 imposta di bollo, expressed as
-`<DatiBollo><BolloVirtuale>SI</BolloVirtuale></DatiBollo>`. The builder cannot emit
-it at all, so any exempt invoice above the threshold is fiscally wrong.
+### ✅ 1. Il microservizio non ha autenticazione — RISOLTO in 0.2.0 (middleware X-Api-Key, rifiuta di avviarsi non configurato)
+`public/index.php` espone `POST /fattura/send` — un'**operazione fiscale
+irreversibile** — senza API key, senza allowlist, niente. Chiunque raggiunga la
+porta può trasmettere fatture con il vostro token Openapi, e `/fattura/numero`
+permette di bruciare numeri progressivi (i buchi di numerazione sono un problema
+in caso di verifica fiscale).
+**Correzione:** richiedere un header `X-Api-Key` verificato contro una variabile
+d'ambiente; rifiutare di attivare la route `/fattura/send` quando la chiave non è impostata.
 
-### ✅ 3. Only `TD01` — no credit notes — FIXED in 0.2.0 (full TD01–TD29 enum)
-`TipoDocumento` is hardcoded. Without **TD04 (nota di credito)** there is no legal
-way to correct a sent invoice — a hard blocker for any real deployment. TD05
-(nota di debito), TD24 (fattura differita), TD16–TD19 (reverse charge /
-integrazioni, needed since the 2022 esterometro change), and TD26 are also absent.
+### ✅ 2. Lacuna di conformità normativa: manca `DatiBollo` — RISOLTO in 0.2.0 (regola automatica €2 > €77,47 + override)
+Le fatture esenti/fuori campo (Natura N2–N6, ad es. il caso d'uso stesso della
+libreria per le quote associative) sopra **€77,47** richiedono per legge l'imposta
+di bollo di €2, espressa come
+`<DatiBollo><BolloVirtuale>SI</BolloVirtuale></DatiBollo>`. Il builder non è in grado
+di emetterla affatto, quindi qualsiasi fattura esente sopra la soglia è fiscalmente errata.
 
-### ✅ 3b. Targets an expired schema version — FIXED in 0.2.0 (XSD 1.2.3, 1.2.2 fallback)
-The code pins `FatturaPA_v1.2.2.xsd` — **valid only until 31 March 2025**. The
-current schema is **1.2.3** (specifiche tecniche 1.9, effective 1 April 2025;
-revision 1.9.1 usable from 15 May 2026), which added `TD29` and `RegimeFiscale`
-`RF20`. The XSD filename/constant and any future enum sets must move to 1.2.3.
+### ✅ 3. Solo `TD01` — nessuna nota di credito — RISOLTO in 0.2.0 (enum completo TD01–TD29)
+`TipoDocumento` è cablato nel codice. Senza **TD04 (nota di credito)** non esiste un
+modo legale di correggere una fattura inviata — un blocco assoluto per qualsiasi
+deployment reale. Mancano anche TD05 (nota di debito), TD24 (fattura differita),
+TD16–TD19 (reverse charge / integrazioni, necessarie dal cambio esterometro 2022)
+e TD26.
 
-## High — blocks common Italian use cases
+### ✅ 3b. Punta a una versione di schema scaduta — RISOLTO in 0.2.0 (XSD 1.2.3, fallback 1.2.2)
+Il codice fissa `FatturaPA_v1.2.2.xsd` — **valido solo fino al 31 marzo 2025**. Lo
+schema corrente è **1.2.3** (specifiche tecniche 1.9, in vigore dal 1° aprile 2025;
+revisione 1.9.1 utilizzabile dal 15 maggio 2026), che ha aggiunto `TD29` e il
+`RegimeFiscale` `RF20`. Il nome file/la costante dello XSD e i futuri set di enum
+devono passare alla 1.2.3.
 
-### ✅ 4. Cedente must be a company — FIXED in 0.2.0 (nome/cognome supported)
-The builder writes only `<Denominazione>` for the supplier; a missing
-`denominazione` produces a PHP *warning* and silently builds broken XML (verified).
-**Ditte individuali / freelancers / forfettari — the largest population of Italian
-e-invoice issuers since the 2024 forfettari mandate — cannot be represented**
-(they need `Nome`/`Cognome`, like the cessionario already supports).
+## Alta — blocca casi d'uso italiani comuni
 
-### ✅ 5. No `DatiPagamento` — FIXED in 0.2.0
-No IBAN, payment terms, or `ModalitaPagamento` (MP01–MP23). Most B2B customers
-and virtually all PA bodies expect payment data in the invoice.
+### ✅ 4. Il cedente deve essere un'azienda — RISOLTO in 0.2.0 (nome/cognome supportati)
+Il builder scrive solo `<Denominazione>` per il fornitore; una `denominazione`
+mancante produce un *warning* PHP e genera silenziosamente XML rotto (verificato).
+**Ditte individuali / freelance / forfettari — la platea più numerosa di emittenti
+di fatture elettroniche in Italia dall'obbligo forfettari del 2024 — non possono
+essere rappresentati** (servono `Nome`/`Cognome`, come già supportato per il
+cessionario).
 
-### ✅ 6. No PA-specific fields — FIXED in 0.2.0 (esigibilita_iva S, CIG/CUP via ordine_acquisto)
-- `EsigibilitaIVA` hardcoded to `I` — **split payment (`S`)**, standard for PA, impossible.
-- No `DatiOrdineAcquisto` / `CodiceCIG` / `CodiceCUP` — PA bodies routinely refuse invoices without CIG/CUP.
-So despite emitting FPA12, real PA invoicing does not work end to end.
+### ✅ 5. Manca `DatiPagamento` — RISOLTO in 0.2.0
+Nessun IBAN, condizioni di pagamento o `ModalitaPagamento` (MP01–MP23). La maggior
+parte dei clienti B2B e praticamente tutti gli enti PA si aspettano i dati di
+pagamento in fattura.
 
-### ✅ 7. No ritenuta d'acconto / cassa previdenziale — FIXED in 0.3.0
-Professionals (accountants, engineers, lawyers…) need `DatiRitenuta` and
-`DatiCassaPrevidenziale`. Combined with #4 this rules out the whole
-professional/freelancer segment. *(0.3.0: `ritenuta` + `cassa` blocks with
-auto-computed amounts, riepilogo integration, 00411 coherence check.)*
+### ✅ 6. Nessun campo specifico PA — RISOLTO in 0.2.0 (esigibilita_iva S, CIG/CUP via ordine_acquisto)
+- `EsigibilitaIVA` cablata a `I` — **split payment (`S`)**, standard per la PA, impossibile.
+- Nessun `DatiOrdineAcquisto` / `CodiceCIG` / `CodiceCUP` — gli enti PA rifiutano di norma le fatture senza CIG/CUP.
+Quindi, pur emettendo FPA12, la fatturazione reale verso la PA non funziona end to end.
 
-### ✅ 8. Wrong default `RiferimentoNormativo` — FIXED in 0.2.0 (per-natura default table)
-Every exempt riepilogo defaults to *"Esente art.10 DPR 633/72"*, which is wrong
-for most Natura codes (N1, N2.2 forfettario, N3.x exports, N6.x reverse charge…).
-A per-natura default table (or making it mandatory when natura is set) is needed.
+### ✅ 7. Nessuna ritenuta d'acconto / cassa previdenziale — RISOLTO in 0.3.0
+I professionisti (commercialisti, ingegneri, avvocati…) hanno bisogno di
+`DatiRitenuta` e `DatiCassaPrevidenziale`. In combinazione con il #4 questo esclude
+l'intero segmento professionisti/freelance. *(0.3.0: blocchi `ritenuta` + `cassa`
+con importi calcolati automaticamente, integrazione nel riepilogo, controllo di
+coerenza 00411.)*
 
-## Medium — correctness and robustness
+### ✅ 8. Default di `RiferimentoNormativo` errato — RISOLTO in 0.2.0 (tabella di default per natura)
+Ogni riepilogo esente ha come default *"Esente art.10 DPR 633/72"*, che è errato
+per la maggior parte dei codici Natura (N1, N2.2 forfettario, N3.x esportazioni,
+N6.x reverse charge…). Serve una tabella di default per natura (o renderlo
+obbligatorio quando natura è impostata).
 
-### ✅ 9. `PrezzoUnitario` truncated — FIXED in 0.2.0 (full precision emitted, SdI 00423 safe)
-Verified: `prezzo_unitario = 0.333, quantita = 3` emits `PrezzoUnitario 0.33` but
-`PrezzoTotale 1.00` (computed from 0.333). SdI check **00423** verifies
-`PrezzoTotale = PrezzoUnitario × Quantita` — 0.33 × 3 = 0.99 vs 1.00 only survives
-by rounding tolerance; more decimals or larger quantities will be **rejected by
-SdI**. The XSD allows up to 8 decimals: emit the actual precision instead of
-`number_format(…, 2)`.
+## Media — correttezza e robustezza
 
-### ✅ 10. Missing-field handling is PHP warnings — FIXED in 0.2.0 (all-errors-at-once validation)
-Absent `indirizzo`/`cap`/`comune`/`denominazione` produce undefined-array-key
-warnings and *silently* build invalid XML (verified). The mandatory-key check only
-covers top-level keys. Needs a proper field-level validation pass with readable
-error messages (ideally mapping to SdI error codes).
+### ✅ 9. `PrezzoUnitario` troncato — RISOLTO in 0.2.0 (emessa la precisione completa, sicuro rispetto a SdI 00423)
+Verificato: `prezzo_unitario = 0.333, quantita = 3` emette `PrezzoUnitario 0.33` ma
+`PrezzoTotale 1.00` (calcolato da 0.333). Il controllo SdI **00423** verifica
+`PrezzoTotale = PrezzoUnitario × Quantita` — 0.33 × 3 = 0.99 vs 1.00 sopravvive solo
+per tolleranza di arrotondamento; più decimali o quantità maggiori saranno
+**scartati dallo SdI**. Lo XSD ammette fino a 8 decimali: emettere la precisione
+reale invece di `number_format(…, 2)`.
 
-### ✅ 11. `progressivo_invio` not validated — FIXED in 0.2.0
-User-supplied values aren't checked against `[A-Za-z0-9]{1,10}`; an invalid value
-fails only at XSD/SdI stage.
+### ✅ 10. La gestione dei campi mancanti è fatta di warning PHP — RISOLTO in 0.2.0 (validazione con tutti gli errori in una volta)
+`indirizzo`/`cap`/`comune`/`denominazione` assenti producono warning
+undefined-array-key e generano *silenziosamente* XML non valido (verificato). Il
+controllo delle chiavi obbligatorie copre solo le chiavi di primo livello. Serve un
+vero passaggio di validazione a livello di campo con messaggi di errore leggibili
+(idealmente mappati sui codici di errore SdI).
 
-### ✅ 12. Numbering is MariaDB/MySQL-only — FIXED in 0.3.0 (PostgreSQL + SQLite ≥3.35 via UPSERT…RETURNING)
-`LAST_INSERT_ID()` upsert doesn't work on PostgreSQL/SQLite. Fine for the current
-deployment, a real limitation for a general-purpose package (Laravel world is
-heavily Postgres). Remaining nit: `date('Y')` uses server TZ (edge case around New Year).
+### ✅ 11. `progressivo_invio` non validato — RISOLTO in 0.2.0
+I valori forniti dall'utente non vengono verificati contro `[A-Za-z0-9]{1,10}`; un
+valore non valido fallisce solo in fase XSD/SdI.
 
-## Missing product surface (not bugs)
+### ✅ 12. Numerazione solo MariaDB/MySQL — RISOLTO in 0.3.0 (PostgreSQL + SQLite ≥3.35 via UPSERT…RETURNING)
+L'upsert con `LAST_INSERT_ID()` non funziona su PostgreSQL/SQLite. Va bene per il
+deployment attuale, ma è una limitazione reale per un pacchetto general-purpose (il
+mondo Laravel è fortemente Postgres). Dettaglio residuo: `date('Y')` usa il fuso
+orario del server (caso limite a cavallo di Capodanno).
 
-- **Ciclo passivo** — ✅ shipped in 0.4.0 for the PEC channel: incoming `.xml`
-  and `.xml.p7m` invoices are collected from the inbox, p7m-unwrapped, and
-  parsed into bookkeeping arrays. Provider-channel receiving (webhooks) still open.
-- **Notification handling** — ✅ partially covered in 0.2.0: `NotificationParser`
-  parses all six receipt types offline and `/fattura/status/{id}` +
-  `/fattura/notifica` exist; ✅ IMAP polling of the PEC inbox shipped in
-  0.3.0 (`PecInboxReader`, own IMAP client + PEC-envelope MIME parsing); ✅ persisted lifecycle state model shipped in 0.4.0 (`InvoiceStore`); still
-  missing: provider webhook ingestion.
-- **Transports** — ✅ PEC transport added in 0.2.0 (self-sufficient channel);
-  Aruba / A-Cube / Invoicetronic / direct-SDICoop adapters still open.
-- **No digital signature (CAdES/XAdES)** — fine while the provider signs, but must
-  be documented per provider; direct SdI accreditation would need it.
-- **Conservazione sostitutiva** — ✅ documented in 0.2.0: the free Agenzia delle
-  Entrate service ("Fatture e Corrispettivi") is the recommended no-dependency
-  path; provider-side storage remains optional.
-- **Rendering** — ✅ HTML via the official foglio di stile shipped in 0.4.0
-  (`StylesheetRenderer`); PDF output (wkhtmltopdf/dompdf on top of it) still open.
-- **Other XML blocks not supported:** `ScontoMaggiorazione` at document level
-  (✅ line level added in 0.3.0), `Allegati`, `DatiDDT`, `DatiContratto`, `Arrotondamento`,
+## Superficie di prodotto mancante (non bug)
+
+- **Ciclo passivo** — ✅ rilasciato in 0.4.0 per il canale PEC: le fatture in
+  ingresso `.xml` e `.xml.p7m` vengono raccolte dalla casella, estratte dal p7m e
+  parsate in array per la contabilità. La ricezione via canale provider (webhook)
+  resta aperta.
+- **Gestione delle notifiche** — ✅ parzialmente coperta in 0.2.0: `NotificationParser`
+  parsa offline tutti e sei i tipi di ricevuta ed esistono `/fattura/status/{id}` +
+  `/fattura/notifica`; ✅ polling IMAP della casella PEC rilasciato in
+  0.3.0 (`PecInboxReader`, client IMAP proprio + parsing MIME della busta PEC); ✅ modello di stato del ciclo di vita persistito rilasciato in 0.4.0 (`InvoiceStore`); manca
+  ancora: l'ingestione dei webhook dei provider.
+- **Trasporti** — ✅ trasporto PEC aggiunto in 0.2.0 (canale autosufficiente);
+  gli adapter Aruba / A-Cube / Invoicetronic / SDICoop diretto restano aperti.
+- **Nessuna firma digitale (CAdES/XAdES)** — va bene finché firma il provider, ma
+  va documentato per ciascun provider; l'accreditamento diretto allo SdI la richiederebbe.
+- **Conservazione sostitutiva** — ✅ documentata in 0.2.0: il servizio gratuito
+  dell'Agenzia delle Entrate ("Fatture e Corrispettivi") è il percorso raccomandato
+  senza dipendenze; la conservazione lato provider resta opzionale.
+- **Rendering** — ✅ HTML tramite il foglio di stile ufficiale rilasciato in 0.4.0
+  (`StylesheetRenderer`); l'output PDF (wkhtmltopdf/dompdf sopra di esso) resta aperto.
+- **Altri blocchi XML non supportati:** `ScontoMaggiorazione` a livello documento
+  (✅ a livello riga aggiunto in 0.3.0), `Allegati`, `DatiDDT`, `DatiContratto`, `Arrotondamento`,
   `AltriDatiGestionali`, `DatiVeicoli`, stabile organizzazione / rappresentante
-  fiscale, multiple bodies per file (lotto di fatture). (`Causale` ✅ added in 0.2.0.)
+  fiscale, più body per file (lotto di fatture). (`Causale` ✅ aggiunta in 0.2.0.)
 
-## Test coverage gaps
+## Lacune nella copertura dei test
 
-0.3.0 brought the suite to 39 tests incl. XSD validation of every built invoice
-(when the schema is vendored), builder edge cases, `NotificationParser`,
-`PecTransport` (mocked SMTP), `NumeratoreService` on SQLite, and
-`MimeAttachmentExtractor` with a nested PEC message. 0.4.1 added
-`OpenapiClient` tests with a mocked Guzzle handler (retry/backoff, 4xx vs 5xx,
-token scrubbing) — 57 tests total. Still missing: `SmtpClient`/`ImapClient`
-protocol tests and microservice endpoint tests (auth middleware, routes).
+La 0.3.0 ha portato la suite a 39 test, incl. validazione XSD di ogni fattura
+generata (quando lo schema è presente in locale), casi limite del builder,
+`NotificationParser`, `PecTransport` (SMTP mockato), `NumeratoreService` su SQLite e
+`MimeAttachmentExtractor` con un messaggio PEC annidato. La 0.4.1 ha aggiunto
+test di `OpenapiClient` con handler Guzzle mockato (retry/backoff, 4xx vs 5xx,
+rimozione del token) — 57 test in totale. Mancano ancora: test di protocollo per
+`SmtpClient`/`ImapClient` e test degli endpoint del microservizio (middleware di
+autenticazione, route).

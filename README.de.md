@@ -218,11 +218,11 @@ optional `PEC_IMAP_PORT` (993), `PEC_IMAP_USERNAME`/`PEC_IMAP_PASSWORD`
 
 ## Dokumentation
 
-- [docs/CAPABILITIES.md](docs/CAPABILITIES.md) — was heute funktioniert, verifizierte Plug-and-play-Oberfläche
-- [docs/GAPS.md](docs/GAPS.md) — bekannte Lücken und ihr Status (nach Schweregrad)
-- [docs/ROADMAP.md](docs/ROADMAP.md) — Marktpositionierung, Adapter-Prioritäten, Release-Plan
+- [docs/CAPABILITIES.md](docs/CAPABILITIES.de.md) — was heute funktioniert, verifizierte Plug-and-play-Oberfläche
+- [docs/GAPS.md](docs/GAPS.de.md) — bekannte Lücken und ihr Status (nach Schweregrad)
+- [docs/ROADMAP.md](docs/ROADMAP.de.md) — Marktpositionierung, Adapter-Prioritäten, Release-Plan
 
-Die technischen Arbeitsdokumente (docs/, CHANGELOG) werden auf Englisch gepflegt.
+Alle Dokumente in docs/ sind auf Italienisch (Hauptsprache), Englisch und Deutsch verfügbar; das CHANGELOG wird auf Englisch gepflegt.
 
 ## Tests
 

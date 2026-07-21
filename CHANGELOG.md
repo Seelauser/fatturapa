@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2 — 2026-07-20
+
+### Changed
+- **Full trilingual documentation**: docs/CAPABILITIES, docs/GAPS and
+  docs/ROADMAP now exist in Italian (primary, unsuffixed), English (.en.md)
+  and German (.de.md), each with a language switcher; READMEs link to their
+  own language. CHANGELOG remains English.
+
 ## 0.4.1 — 2026-07-20
 
 Review pass + trilingual documentation.

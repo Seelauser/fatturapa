@@ -216,7 +216,7 @@ e `PEC_SMTP_PORT`. Lettura casella: `PEC_IMAP_HOST`, opzionali `PEC_IMAP_PORT` (
 - [docs/GAPS.md](docs/GAPS.md) — lacune note e loro stato (in ordine di gravità)
 - [docs/ROADMAP.md](docs/ROADMAP.md) — posizionamento di mercato, priorità degli adapter, piano di rilascio
 
-I documenti tecnici di lavoro (docs/, CHANGELOG) sono mantenuti in inglese.
+Tutta la documentazione in docs/ è disponibile in italiano (principale), inglese e tedesco; il CHANGELOG è mantenuto in inglese.
 
 ## Test
 
