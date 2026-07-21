@@ -70,7 +70,7 @@ class NotificationParser
     private function firstText(DOMDocument $doc, string $tag): ?string
     {
         $node = $doc->getElementsByTagName($tag)->item(0);
-        return $node?->textContent !== null && $node !== null ? trim($node->textContent) : null;
+        return $node === null ? null : trim($node->textContent);
     }
 
     private function childText(DOMElement $el, string $tag): ?string

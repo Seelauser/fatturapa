@@ -1,101 +1,111 @@
 # alpsplanner/fatturapa
 
-A small, **framework-free** PHP library to build Italian **FatturaPA** (Sistema di
-Interscambio / SdI) electronic-invoice XML and to reserve sequential invoice numbers —
-plus an optional HTTP microservice. Extracted from [AlpsPlanner](https://alpsplanner.com)
-and usable by any PHP project.
+🇮🇹 Italiano · 🇬🇧 [English](README.en.md) · 🇩🇪 [Deutsch](README.de.md)
 
-- **No framework dependency** — the core (`XmlBuilder`, `NumeratoreService`) needs only
-  `ext-dom`. Drop it into CiviCRM, Laravel, Symfony, or plain PHP.
-- **Self-sufficient by design** — the **PEC transport** sends to SdI with nothing but
-  your own PEC mailbox (zero third-party services); the `NotificationParser` reads the
-  SdI receipts (RC/NS/MC/NE/DT/AT) offline; validation runs locally against the
-  official XSD 1.2.3. Conservazione can use the free Agenzia delle Entrate service.
-- **Compliance built in** — TD01–TD29, granular Natura sub-codes, automatic €2
-  imposta di bollo on exempt totals > €77.47, split payment (`EsigibilitaIVA=S`),
-  CIG/CUP for PA, `DatiPagamento`, forfettario-friendly (person cedente, RF19, N2.2).
-- **Concurrency-safe numbering** — atomic per-year/per-sezionale counter on MariaDB/MySQL.
-- **Swappable SdI transport** — `SdiTransport` interface; PEC and Openapi.com adapters bundled.
-- **Optional microservice** — a tiny Slim app exposes `build` / `numero` / `send` /
-  `status` / `notifica` over HTTP, protected by an `X-Api-Key` header.
+Una libreria PHP **senza framework** per creare l'XML della **FatturaPA** (Sistema di
+Interscambio / SdI), riservare numeri di fattura progressivi e gestire l'intero ciclo
+attivo e passivo — con un microservizio HTTP opzionale. Estratta da
+[AlpsPlanner](https://alpsplanner.com) e utilizzabile in qualsiasi progetto PHP.
 
-> ⚠️ Sending to SdI is an **irreversible fiscal operation**. This library never sends
-> automatically — a human triggers `send`. Always verify fiscal treatment with an accountant.
+- **Nessuna dipendenza da framework** — il nucleo (`XmlBuilder`, `NumeratoreService`)
+  richiede solo `ext-dom`. Integrabile in CiviCRM, Laravel, Symfony o PHP puro.
+- **Autosufficiente per scelta** — il **trasporto PEC** invia allo SdI usando solo la
+  propria casella PEC (zero servizi di terze parti); il `NotificationParser` legge le
+  ricevute SdI (RC/NS/MC/NE/DT/AT) offline; la validazione avviene in locale con lo
+  schema XSD 1.2.3 ufficiale. Per la conservazione si può usare il servizio gratuito
+  dell'Agenzia delle Entrate.
+- **Conformità integrata** — TD01–TD29, sottocodici Natura granulari, imposta di bollo
+  da 2 € automatica sugli importi esenti oltre 77,47 €, split payment
+  (`EsigibilitaIVA=S`), CIG/CUP per la PA, `DatiPagamento`, ritenuta d'acconto, cassa
+  previdenziale, sconti di linea, adatta ai forfettari (cedente persona fisica, RF19, N2.2).
+- **Numerazione concorrenza-sicura** — contatore atomico per anno/sezionale su
+  MariaDB/MySQL, PostgreSQL e SQLite ≥ 3.35.
+- **Trasporto SdI intercambiabile** — interfaccia `SdiTransport`; adapter PEC e
+  Openapi.com inclusi.
+- **Ciclo passivo** — raccolta delle fatture fornitori dalla casella PEC (`.xml` e
+  `.xml.p7m` firmate), estrazione dal p7m e parsing in un array pronto per la contabilità.
+- **Microservizio opzionale** — una piccola app Slim espone `build` / `numero` / `send` /
+  `status` / `notifica` / `inbox` / `render` via HTTP, protetta da header `X-Api-Key`.
 
-## Install
+> ⚠️ L'invio allo SdI è un'**operazione fiscale irreversibile**. Questa libreria non
+> invia mai automaticamente — l'invio è sempre attivato da una persona. Verificare
+> sempre il trattamento fiscale con il proprio commercialista.
+
+## Installazione
 
 ```bash
 composer require alpsplanner/fatturapa
 ```
 
-Requires PHP 8.2+, `ext-dom`, `ext-libxml`.
+Richiede PHP 8.2+, `ext-dom`, `ext-libxml`.
 
-## Build XML
+## Creare l'XML
 
 ```php
 use AlpsFatturapa\XmlBuilder;
 
 $xml = (new XmlBuilder())->build([
-    'tipo_documento' => 'fattura_b2c',
+    'tipo_documento' => 'TD01',
     'numero'         => '2026/00042',
     'data'           => '2026-07-01',
     'cedente' => [
-        'denominazione' => 'Musterverein Südtirol',
+        'denominazione' => 'Associazione Esempio',
         'partita_iva'   => '01234567890',
         'regime_fiscale'=> 'RF01',
-        'indirizzo' => 'Hauptplatz 1', 'cap' => '39100', 'comune' => 'Bozen',
+        'indirizzo' => 'Via Roma 1', 'cap' => '39100', 'comune' => 'Bolzano',
         'provincia' => 'BZ', 'nazione' => 'IT',
     ],
     'cessionario' => [
-        'nome' => 'Anna', 'cognome' => 'Gruber', 'codice_fiscale' => 'GRBNNA80A01A952G',
-        'indirizzo' => 'Dorfweg 5', 'cap' => '39100', 'comune' => 'Bozen',
+        'nome' => 'Anna', 'cognome' => 'Verdi', 'codice_fiscale' => 'VRDNNA80A41A952G',
+        'indirizzo' => 'Via Dante 5', 'cap' => '39100', 'comune' => 'Bolzano',
         'provincia' => 'BZ', 'nazione' => 'IT',
     ],
     'linee' => [
-        ['descrizione' => 'Mitgliedsbeitrag 2026', 'quantita' => 1, 'prezzo_unitario' => 50.0, 'aliquota_iva' => 0.0, 'natura' => 'N4'],
+        ['descrizione' => 'Quota associativa 2026', 'quantita' => 1, 'prezzo_unitario' => 50.0, 'aliquota_iva' => 0.0, 'natura' => 'N4'],
     ],
 ]);
 ```
 
-More input options (see the `XmlBuilder` docblock for the full shape):
+Altre opzioni di input (la forma completa è nel docblock di `XmlBuilder`):
 
 ```php
-'tipo_documento' => 'TD04',                     // any TD01…TD29 (TD04 = credit note)
-'formato'        => 'FPA12',                    // public administration
+'tipo_documento' => 'TD04',                     // qualsiasi TD01…TD29 (TD04 = nota di credito)
+'formato'        => 'FPA12',                    // pubblica amministrazione
 'esigibilita_iva'=> 'S',                        // split payment (PA)
 'ordine_acquisto'=> ['cig' => 'Z123456789', 'cup' => '...'],
-'bollo'          => true,                       // omit for the automatic €2 rule (> €77.47 exempt)
+'bollo'          => true,                       // omettere per la regola automatica dei 2 € (> 77,47 € esenti)
 'causale'        => 'Riferimento pratica ...',
-'cedente'        => ['nome' => 'Max', 'cognome' => 'Muster', 'regime_fiscale' => 'RF19', ...], // freelancer/forfettario
+'cedente'        => ['nome' => 'Mario', 'cognome' => 'Rossi', 'regime_fiscale' => 'RF19', ...], // libero professionista/forfettario
 'pagamento'      => ['condizioni' => 'TP02', 'dettagli' => [['modalita' => 'MP05', 'iban' => 'IT60...', 'scadenza' => '2026-08-01']]],
-'ritenuta'       => ['tipo' => 'RT01', 'aliquota' => 20.0, 'causale' => 'A'],   // + 'ritenuta' => true on the lines
-'cassa'          => ['tipo' => 'TC22', 'aliquota' => 4.0, 'aliquota_iva' => 22.0], // cassa previdenziale (auto-added to totals)
-// per line: 'sconto_percentuale' => 10.0 or 'sconto_importo' => 5.0
+'ritenuta'       => ['tipo' => 'RT01', 'aliquota' => 20.0, 'causale' => 'A'],   // + 'ritenuta' => true sulle linee
+'cassa'          => ['tipo' => 'TC22', 'aliquota' => 4.0, 'aliquota_iva' => 22.0], // cassa previdenziale (sommata ai totali)
+// per linea: 'sconto_percentuale' => 10.0 oppure 'sconto_importo' => 5.0
 ```
 
-Validation is two-layered: `build()` itself checks fields and SdI semantic rules
-(natura ⇔ aliquota 0, granular sub-codes, codice destinatario length, …) and throws
-with **all** errors listed. Optional XSD validation (place the official
-`FatturaPA_v1.2.3.xsd` in `resources/xsd/`; 1.2.2 is picked up as fallback):
+La validazione è a due livelli: `build()` verifica i campi e le regole semantiche SdI
+(natura ⇔ aliquota 0, sottocodici granulari, lunghezza del codice destinatario, …) e
+solleva un'eccezione con **tutti** gli errori elencati. Validazione XSD opzionale
+(copiare lo schema ufficiale `FatturaPA_v1.2.3.xsd` in `resources/xsd/`; la 1.2.2
+viene usata come ripiego):
 
 ```php
-$errors = (new XmlBuilder())->validate($xml); // [] when valid
+$errors = (new XmlBuilder())->validate($xml); // [] se valido
 ```
 
-## Reserve an invoice number
+## Riservare un numero di fattura
 
 ```php
 use AlpsFatturapa\NumeratoreService;
 
-$svc = new NumeratoreService($pdo);       // MariaDB/MySQL, PostgreSQL or SQLite ≥3.35; table configurable
-$svc->ensureTable();                       // creates `sdi_sequence` if missing
+$svc = new NumeratoreService($pdo);       // MariaDB/MySQL, PostgreSQL o SQLite ≥3.35; tabella configurabile
+$svc->ensureTable();                       // crea `sdi_sequence` se assente
 $numero = $svc->next();                    // "2026/00001", "2026/00002", …
-$numero = $svc->next(2026, 'EXT');         // "2026/00001/EXT" (separate sezionale)
+$numero = $svc->next(2026, 'EXT');         // "2026/00001/EXT" (sezionale separato)
 ```
 
-## Send to SdI (manual)
+## Inviare allo SdI (manuale)
 
-### Via your own PEC mailbox — no third-party service
+### Tramite la propria casella PEC — nessun servizio di terze parti
 
 ```php
 use AlpsFatturapa\Transport\PecTransport;
@@ -103,18 +113,18 @@ use AlpsFatturapa\Transport\PecTransport;
 $pec = new PecTransport(
     pecAddress:  'azienda@pec.example.it',
     cedentePiva: '01234567890',
-    smtpHost:    'smtps.pec.aruba.it',   // your PEC provider's SMTP
+    smtpHost:    'smtps.pec.aruba.it',   // SMTP del proprio gestore PEC
     smtpUsername:'azienda@pec.example.it',
     smtpPassword:'***',
-    // First send ever goes to sdi01@pec.fatturapa.it; SdI replies with your
-    // dedicated address — pass it as $sdiAddress from then on.
+    // Il primo invio in assoluto va a sdi01@pec.fatturapa.it; lo SdI risponde
+    // assegnando l'indirizzo dedicato — da quel momento passarlo come $sdiAddress.
 );
 $result = $pec->sendInvoice($xml, ['progressivo' => '00042']);
 // ['identificativo' => 'IT01234567890_00042.xml', ...]
 ```
 
-SdI receipts arrive back in the PEC inbox. Poll it automatically (own IMAP
-client, handles the PEC `postacert.eml` nesting):
+Le ricevute SdI arrivano nella casella PEC. Interrogarla automaticamente (client
+IMAP proprio, gestisce l'imbustamento PEC `postacert.eml`):
 
 ```php
 use AlpsFatturapa\Notifications\PecInboxReader;
@@ -124,78 +134,89 @@ foreach (PecInboxReader::createFromEnv()->fetchNotifications() as $f) {
 }
 ```
 
-`fetchAll()` additionally returns incoming **purchase invoices** (ciclo
-passivo, `.xml` and signed `.xml.p7m`) already parsed into a bookkeeping-ready
-array — see `Passive\ReceivedInvoiceParser` and `Passive\P7mExtractor`. Track
-outbound state with `Lifecycle\InvoiceStore` (built → sent → delivered/rejected/…,
-`applyNotification()` closes the loop automatically).
+`fetchAll()` restituisce in più le **fatture passive** in arrivo (ciclo passivo,
+`.xml` e `.xml.p7m` firmate) già trasformate in un array pronto per la contabilità —
+vedi `Passive\ReceivedInvoiceParser` e `Passive\P7mExtractor`. Lo stato delle fatture
+emesse si traccia con `Lifecycle\InvoiceStore` (creata → inviata → consegnata/
+scartata/…, `applyNotification()` chiude il cerchio automaticamente).
 
-…or parse a notification XML you already have:
+…oppure interpretare una ricevuta XML già scaricata:
 
 ```php
 use AlpsFatturapa\Notifications\NotificationParser;
 
 $n = (new NotificationParser())->parse($attachmentXml);
 $n->tipo;          // 'RC' | 'NS' | 'MC' | 'NE' | 'DT' | 'AT'
-$n->isRejection(); // true on scarto → fix and resend within 5 days (same numero allowed)
+$n->isRejection(); // true in caso di scarto → correggere e rinviare entro 5 giorni (stesso numero ammesso)
 $n->errori;        // [['codice' => '00404', 'descrizione' => ...], ...]
 ```
 
-Notes on the PEC channel: message ≤ 30 MB, invoice ≤ 5 MB, asynchronous (no
-instant accept/reject). Signature is **not** required for B2B/B2C; FPA12 (PA)
-invoices must be signed — that needs a qualified certificate regardless of channel.
-For free 10-year conservazione, activate the Agenzia delle Entrate service in
-"Fatture e Corrispettivi".
+Note sul canale PEC: messaggio ≤ 30 MB, fattura ≤ 5 MB, asincrono (nessun esito
+istantaneo). La firma **non** è richiesta per B2B/B2C; le fatture FPA12 (PA) devono
+essere firmate — serve un certificato qualificato, indipendentemente dal canale.
+Per la conservazione decennale gratuita attivare il servizio dell'Agenzia delle
+Entrate in "Fatture e Corrispettivi".
 
-### Via Openapi.com (optional intermediary)
+### Tramite Openapi.com (intermediario opzionale)
 
 ```php
 use AlpsFatturapa\Transport\OpenapiClient;
 
-$client = OpenapiClient::createFromEnv(testMode: true); // reads OPENAPI_TOKEN
+$client = OpenapiClient::createFromEnv(testMode: true); // legge OPENAPI_TOKEN
 $result = $client->sendInvoice($xml, ['numero' => '2026/00042']);
 // ['identificativo' => '<uuid>', 'raw' => [...]]
 ```
 
-Implement `AlpsFatturapa\Contracts\SdiTransport` to plug in a different provider.
+Per altri provider implementare `AlpsFatturapa\Contracts\SdiTransport`.
 
-## HTTP microservice (optional)
+## Resa leggibile (foglio di stile ufficiale)
 
-Install with dev/extra deps (Slim, Guzzle) and serve `public/`:
+```php
+$html = (new AlpsFatturapa\Render\StylesheetRenderer())->renderHtml($xml);
+```
+
+Richiede `php-xsl` e il foglio di stile ufficiale AdE in `resources/xsl/` (non
+incluso per motivi di licenza, come lo XSD).
+
+## Microservizio HTTP (opzionale)
+
+Installare con le dipendenze extra (Slim, Guzzle) e servire `public/`:
 
 ```bash
 composer install
 php -S 0.0.0.0:8080 -t public
 ```
 
-All routes except `/health` require the `X-Api-Key` header matching the `API_KEY`
-env var; the service refuses requests when `API_KEY` is unset.
+Tutte le rotte tranne `/health` richiedono l'header `X-Api-Key` corrispondente alla
+variabile `API_KEY`; senza `API_KEY` configurata il servizio rifiuta le richieste.
 
-| Method & path        | Body                          | Returns |
+| Metodo e percorso    | Body                          | Risposta |
 |----------------------|-------------------------------|---------|
 | `GET  /health`       | —                             | `{status:"ok"}` |
 | `POST /fattura/build`| `{ invoice: {…} }`            | `{ xml, valid, errors }` |
-| `POST /fattura/numero`| `{ year?, sezionale? }`      | `{ numero }` (needs DB env) |
+| `POST /fattura/numero`| `{ year?, sezionale? }`      | `{ numero }` (richiede env DB) |
 | `POST /fattura/send` | `{ xml, meta? }`              | `{ identificativo, raw }` |
 | `GET  /fattura/status/{id}` | —                      | `{ status, raw }` |
-| `POST /fattura/notifica` | `{ xml }`                 | parsed SdI notification |
-| `GET  /fattura/inbox` | —                            | new SdI notifications **and incoming invoices** from the PEC inbox (IMAP) |
-| `POST /fattura/render` | `{ xml }`                   | human-readable HTML (official foglio di stile; needs php-xsl + XSL in `resources/xsl/`) |
+| `POST /fattura/notifica` | `{ xml }`                 | ricevuta SdI interpretata |
+| `GET  /fattura/inbox` | —                            | nuove ricevute SdI **e fatture passive** dalla casella PEC (IMAP) |
+| `POST /fattura/render` | `{ xml }`                   | HTML leggibile (foglio di stile ufficiale; richiede php-xsl + XSL in `resources/xsl/`) |
 
-Env: `API_KEY` (required), `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`,
-`DB_PORT`, `SDI_SEQUENCE_TABLE`; transport selection `SDI_TRANSPORT` (`pec` |
-`openapi`, default `openapi`). For `openapi`: `OPENAPI_TOKEN`, `SDI_MODE`
-(`production` disables sandbox). For `pec`: `PEC_ADDRESS`, `PEC_SMTP_HOST`,
-`PEC_SMTP_USERNAME`, `PEC_SMTP_PASSWORD`, `CEDENTE_PIVA`, optional
-`PEC_SDI_ADDRESS` (after SdI assigns it), `PEC_SMTP_PORT`. Inbox polling:
-`PEC_IMAP_HOST`, optional `PEC_IMAP_PORT` (993), `PEC_IMAP_USERNAME`/`PEC_IMAP_PASSWORD`
-(default to the SMTP credentials).
+Variabili d'ambiente: `API_KEY` (obbligatoria), `DB_HOST`, `DB_DATABASE`,
+`DB_USERNAME`, `DB_PASSWORD`, `DB_PORT`, `SDI_SEQUENCE_TABLE`; selezione del
+trasporto `SDI_TRANSPORT` (`pec` | `openapi`, default `openapi`). Per `openapi`:
+`OPENAPI_TOKEN`, `SDI_MODE` (`production` disattiva la sandbox). Per `pec`:
+`PEC_ADDRESS`, `PEC_SMTP_HOST`, `PEC_SMTP_USERNAME`, `PEC_SMTP_PASSWORD`,
+`CEDENTE_PIVA`, opzionali `PEC_SDI_ADDRESS` (dopo l'assegnazione da parte dello SdI)
+e `PEC_SMTP_PORT`. Lettura casella: `PEC_IMAP_HOST`, opzionali `PEC_IMAP_PORT` (993),
+`PEC_IMAP_USERNAME`/`PEC_IMAP_PASSWORD` (default: credenziali SMTP).
 
-## Documentation
+## Documentazione
 
-- [docs/CAPABILITIES.md](docs/CAPABILITIES.md) — what works today, verified plug-and-play surface
-- [docs/GAPS.md](docs/GAPS.md) — known gaps, bugs, and compliance holes (ordered by severity)
-- [docs/ROADMAP.md](docs/ROADMAP.md) — market positioning, transport-adapter priorities, release plan
+- [docs/CAPABILITIES.md](docs/CAPABILITIES.md) — cosa funziona oggi, superficie plug-and-play verificata
+- [docs/GAPS.md](docs/GAPS.md) — lacune note e loro stato (in ordine di gravità)
+- [docs/ROADMAP.md](docs/ROADMAP.md) — posizionamento di mercato, priorità degli adapter, piano di rilascio
+
+I documenti tecnici di lavoro (docs/, CHANGELOG) sono mantenuti in inglese.
 
 ## Test
 
@@ -203,6 +224,6 @@ Env: `API_KEY` (required), `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD
 composer install && composer test
 ```
 
-## License
+## Licenza
 
-MIT — see [LICENSE](LICENSE).
+MIT — vedi [LICENSE](LICENSE).

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.1 — 2026-07-20
+
+Review pass + trilingual documentation.
+
+### Fixed
+- **Automatic bollo rule refined**: only nature actually subject to the €2
+  stamp count toward the €77.47 threshold (N1, N2.x, N3.5, N3.6, N4, N5) —
+  exports/intra-EU (N3.1–N3.4) and reverse-charge (N6.x, N7) lines no longer
+  trigger a wrong `DatiBollo`.
+- **`ImportoPagamento` default is net of ritenuta**: when a `pagamento`
+  dettaglio has no explicit `importo`, the emitted amount is now the sum the
+  customer actually pays (total − withholding) instead of the gross total.
+- Dockerfile now installs `ext-xsl` (stylesheet rendering inside the container).
+
+### Added
+- `OpenapiClient` test coverage with a mocked Guzzle handler: bearer header,
+  5xx retry, immediate 4xx failure, missing-uuid error, token never logged.
+- **Trilingual documentation**: `README.md` is now Italian (primary),
+  with full `README.en.md` and `README.de.md` translations. Working documents
+  (docs/, CHANGELOG) remain in English.
+
 ## 0.4.0 — 2026-07-20
 
 Lifecycle, ciclo passivo, and rendering — the full send-and-receive cycle now

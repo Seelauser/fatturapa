@@ -116,7 +116,7 @@ heavily Postgres). Remaining nit: `date('Y')` uses server TZ (edge case around N
 0.3.0 brought the suite to 39 tests incl. XSD validation of every built invoice
 (when the schema is vendored), builder edge cases, `NotificationParser`,
 `PecTransport` (mocked SMTP), `NumeratoreService` on SQLite, and
-`MimeAttachmentExtractor` with a nested PEC message. Still missing:
+`MimeAttachmentExtractor` with a nested PEC message. 0.4.1 added
 `OpenapiClient` tests with a mocked Guzzle handler (retry/backoff, 4xx vs 5xx,
-token scrubbing), `SmtpClient`/`ImapClient` protocol tests, and microservice
-endpoint tests (auth middleware, routes).
+token scrubbing) — 57 tests total. Still missing: `SmtpClient`/`ImapClient`
+protocol tests and microservice endpoint tests (auth middleware, routes).

@@ -308,4 +308,31 @@ final class XmlBuilderTest extends TestCase
         $this->assertStringContainsString('<PrezzoTotale>90.00</PrezzoTotale>', $xml);
         $this->assertStringContainsString('<ImportoTotaleDocumento>109.80</ImportoTotaleDocumento>', $xml);
     }
+    public function testBolloNotAppliedToReverseChargeOrExport(): void
+    {
+        // N6.7 (reverse charge) and N3.2 (intra-EU) are not subject to bollo.
+        $xml = $this->buildValid($this->sampleInvoice([
+            'cessionario' => [
+                'denominazione' => 'Cliente Srl', 'partita_iva' => '09876543210',
+                'indirizzo' => 'Via Milano 2', 'cap' => '20100', 'comune' => 'Milano', 'nazione' => 'IT',
+            ],
+            'linee' => [
+                ['descrizione' => 'Subappalto', 'quantita' => 1, 'prezzo_unitario' => 500.0, 'aliquota_iva' => 0.0, 'natura' => 'N6.7'],
+            ],
+        ]));
+        $this->assertStringNotContainsString('<DatiBollo>', $xml);
+    }
+
+    public function testImportoPagamentoDefaultsNetOfRitenuta(): void
+    {
+        // 1000 + 220 IVA = 1220 total; 200 ritenuta withheld -> 1020.00 due.
+        $xml = $this->buildValid($this->sampleInvoice([
+            'ritenuta' => ['tipo' => 'RT01', 'aliquota' => 20.0, 'causale' => 'A'],
+            'pagamento' => ['dettagli' => [['modalita' => 'MP05']]],
+            'linee' => [
+                ['descrizione' => 'Consulenza', 'quantita' => 1, 'prezzo_unitario' => 1000.0, 'aliquota_iva' => 22.0, 'ritenuta' => true],
+            ],
+        ]));
+        $this->assertStringContainsString('<ImportoPagamento>1020.00</ImportoPagamento>', $xml);
+    }
 }

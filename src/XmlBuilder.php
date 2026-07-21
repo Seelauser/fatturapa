@@ -51,6 +51,14 @@ class XmlBuilder
     /** Threshold above which exempt amounts require the €2 imposta di bollo. */
     public const BOLLO_THRESHOLD = 77.47;
 
+    /**
+     * Nature that count toward the bollo threshold: escluse (N1), non soggette
+     * (N2.x), esenti (N4), margine (N5), non imponibili con/senza plafond
+     * (N3.5, N3.6). Exports and intra-EU supplies (N3.1–N3.4) are bollo-exempt
+     * per DPR 642/72 tab. B; reverse charge (N6.x) and N7 carry VAT downstream.
+     */
+    private const BOLLO_NATURE = ['N1', 'N2.1', 'N2.2', 'N3.5', 'N3.6', 'N4', 'N5'];
+
     private const TIPI_DOCUMENTO = [
         'TD01', 'TD02', 'TD03', 'TD04', 'TD05', 'TD06',
         'TD16', 'TD17', 'TD18', 'TD19', 'TD20', 'TD21', 'TD22', 'TD23',
@@ -181,7 +189,7 @@ class XmlBuilder
         foreach ($riepiloghi as &$r) {
             $r['imposta'] = $r['natura'] ? 0.0 : round($r['imponibile'] * $r['aliquota'] / 100, 2);
             $totaleDocumento += $r['imponibile'] + $r['imposta'];
-            if ($r['natura']) {
+            if ($r['natura'] !== null && in_array($r['natura'], self::BOLLO_NATURE, true)) {
                 $totaleEsente += $r['imponibile'];
             }
         }
@@ -361,7 +369,9 @@ class XmlBuilder
                 if (!empty($det['scadenza'])) {
                     $this->el($doc, $dd, 'DataScadenzaPagamento', $det['scadenza']);
                 }
-                $this->el($doc, $dd, 'ImportoPagamento', $this->dec((float) ($det['importo'] ?? $totaleDocumento)));
+                // Default to the amount actually due: total net of any ritenuta withheld by the customer.
+                $dovuto = $totaleDocumento - ($ritenuta['importo'] ?? 0.0);
+                $this->el($doc, $dd, 'ImportoPagamento', $this->dec((float) ($det['importo'] ?? $dovuto)));
                 if (!empty($det['iban'])) {
                     $this->el($doc, $dd, 'IBAN', strtoupper(str_replace(' ', '', $det['iban'])));
                 }

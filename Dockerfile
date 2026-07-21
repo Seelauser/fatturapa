@@ -1,7 +1,7 @@
 FROM php:8.3-cli-alpine AS base
 
-RUN apk add --no-cache curl libxml2-dev \
- && docker-php-ext-install mbstring dom pdo pdo_mysql
+RUN apk add --no-cache curl libxml2-dev libxslt-dev \
+ && docker-php-ext-install mbstring dom pdo pdo_mysql xsl
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
