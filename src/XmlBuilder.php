@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa;
+namespace Fatturapa;
 
 use DOMDocument;
 use DOMElement;

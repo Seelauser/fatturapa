@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.0 — 2026-07-20
+
+Independence from the originating project: no more correlation between this
+public package and the private commercial product it was extracted from.
+
+### Changed
+- **PHP namespace**: `AlpsFatturapa\` → `Fatturapa\` across all source, tests,
+  and the microservice. Breaking change for existing consumers.
+- **Composer package**: renamed `alpsplanner/fatturapa` → `seelauser/fatturapa`;
+  author/copyright holder updated accordingly (`LICENSE`, `composer.json`).
+- **Docs and README** (all three languages): removed the "extracted from
+  AlpsPlanner" attribution and the alpsplanner.com link; replaced with a
+  generic mention of the real-world nonprofit use case that shaped the
+  requirements, with no identifying reference to the source product.
+- `phpunit.xml` test suite name updated to match the new package name.
+
+### Why
+Publicly naming the specific commercial product this was extracted from
+exposed unnecessary reconnaissance value (implementation details, endpoint
+shapes, env var names) about a live production system with no benefit to
+this package's users. The package stands on its own merits; no reader needs
+to know what product it originated from.
+
 ## 0.4.2 — 2026-07-20
 
 ### Changed
@@ -121,5 +144,5 @@ third-party service now does.
 
 ## 0.1.0 — 2026-07-19
 
-Initial extraction from AlpsPlanner: `XmlBuilder` (TD01 happy path),
-`NumeratoreService`, Openapi.com transport, Slim microservice.
+Initial extraction from a production nonprofit-invoicing system: `XmlBuilder`
+(TD01 happy path), `NumeratoreService`, Openapi.com transport, Slim microservice.

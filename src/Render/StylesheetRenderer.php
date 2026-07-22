@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Render;
+namespace Fatturapa\Render;
 
 use DOMDocument;
 use RuntimeException;

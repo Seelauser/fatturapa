@@ -1,11 +1,11 @@
-# alpsplanner/fatturapa
+# seelauser/fatturapa
 
 🇮🇹 Italiano · 🇬🇧 [English](README.en.md) · 🇩🇪 [Deutsch](README.de.md)
 
 Una libreria PHP **senza framework** per creare l'XML della **FatturaPA** (Sistema di
 Interscambio / SdI), riservare numeri di fattura progressivi e gestire l'intero ciclo
-attivo e passivo — con un microservizio HTTP opzionale. Estratta da
-[AlpsPlanner](https://alpsplanner.com) e utilizzabile in qualsiasi progetto PHP.
+attivo e passivo — con un microservizio HTTP opzionale. Nata dall'esigenza reale di
+un'associazione altoatesina e resa autonoma e riutilizzabile in qualsiasi progetto PHP.
 
 - **Nessuna dipendenza da framework** — il nucleo (`XmlBuilder`, `NumeratoreService`)
   richiede solo `ext-dom`. Integrabile in CiviCRM, Laravel, Symfony o PHP puro.
@@ -34,7 +34,7 @@ attivo e passivo — con un microservizio HTTP opzionale. Estratta da
 ## Installazione
 
 ```bash
-composer require alpsplanner/fatturapa
+composer require seelauser/fatturapa
 ```
 
 Richiede PHP 8.2+, `ext-dom`, `ext-libxml`.
@@ -42,7 +42,7 @@ Richiede PHP 8.2+, `ext-dom`, `ext-libxml`.
 ## Creare l'XML
 
 ```php
-use AlpsFatturapa\XmlBuilder;
+use Fatturapa\XmlBuilder;
 
 $xml = (new XmlBuilder())->build([
     'tipo_documento' => 'TD01',
@@ -95,7 +95,7 @@ $errors = (new XmlBuilder())->validate($xml); // [] se valido
 ## Riservare un numero di fattura
 
 ```php
-use AlpsFatturapa\NumeratoreService;
+use Fatturapa\NumeratoreService;
 
 $svc = new NumeratoreService($pdo);       // MariaDB/MySQL, PostgreSQL o SQLite ≥3.35; tabella configurabile
 $svc->ensureTable();                       // crea `sdi_sequence` se assente
@@ -108,7 +108,7 @@ $numero = $svc->next(2026, 'EXT');         // "2026/00001/EXT" (sezionale separa
 ### Tramite la propria casella PEC — nessun servizio di terze parti
 
 ```php
-use AlpsFatturapa\Transport\PecTransport;
+use Fatturapa\Transport\PecTransport;
 
 $pec = new PecTransport(
     pecAddress:  'azienda@pec.example.it',
@@ -127,7 +127,7 @@ Le ricevute SdI arrivano nella casella PEC. Interrogarla automaticamente (client
 IMAP proprio, gestisce l'imbustamento PEC `postacert.eml`):
 
 ```php
-use AlpsFatturapa\Notifications\PecInboxReader;
+use Fatturapa\Notifications\PecInboxReader;
 
 foreach (PecInboxReader::createFromEnv()->fetchNotifications() as $f) {
     // $f['filename'], $f['notification'] (SdiNotification)
@@ -143,7 +143,7 @@ scartata/…, `applyNotification()` chiude il cerchio automaticamente).
 …oppure interpretare una ricevuta XML già scaricata:
 
 ```php
-use AlpsFatturapa\Notifications\NotificationParser;
+use Fatturapa\Notifications\NotificationParser;
 
 $n = (new NotificationParser())->parse($attachmentXml);
 $n->tipo;          // 'RC' | 'NS' | 'MC' | 'NE' | 'DT' | 'AT'
@@ -160,19 +160,19 @@ Entrate in "Fatture e Corrispettivi".
 ### Tramite Openapi.com (intermediario opzionale)
 
 ```php
-use AlpsFatturapa\Transport\OpenapiClient;
+use Fatturapa\Transport\OpenapiClient;
 
 $client = OpenapiClient::createFromEnv(testMode: true); // legge OPENAPI_TOKEN
 $result = $client->sendInvoice($xml, ['numero' => '2026/00042']);
 // ['identificativo' => '<uuid>', 'raw' => [...]]
 ```
 
-Per altri provider implementare `AlpsFatturapa\Contracts\SdiTransport`.
+Per altri provider implementare `Fatturapa\Contracts\SdiTransport`.
 
 ## Resa leggibile (foglio di stile ufficiale)
 
 ```php
-$html = (new AlpsFatturapa\Render\StylesheetRenderer())->renderHtml($xml);
+$html = (new Fatturapa\Render\StylesheetRenderer())->renderHtml($xml);
 ```
 
 Richiede `php-xsl` e il foglio di stile ufficiale AdE in `resources/xsl/` (non

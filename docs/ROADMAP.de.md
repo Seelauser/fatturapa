@@ -34,7 +34,7 @@ Differenzierungsmerkmale sind:
   und sind tot; italienische PHP-Agenturen setzen stark auf Laravel. Null Konkurrenz.
 - **CiviCRM-Extension** — es existiert überhaupt keine FatturaPA-Extension, obwohl
   italienische Non-Profits seit 2019/2024 unter der Pflicht stehen. Greenfield, und es
-  ist das Heimspielfeld dieses Pakets (AlpsPlanner/Vereine).
+  ist das Heimspielfeld dieses Pakets (gemeinnützige Vereine).
 - Der einbettbare Kern für den fragmentierten Plugin-Markt: italienische
   WooCommerce-E-Rechnungs-Plugins (4.000/800/400… aktive Installationen),
   PrestaShop-Module für 120–168 €, Magento-Module — jedes davon baut derzeit XML von

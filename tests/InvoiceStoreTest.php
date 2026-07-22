@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\Lifecycle\InvoiceStore;
-use AlpsFatturapa\Notifications\SdiNotification;
+use Fatturapa\Lifecycle\InvoiceStore;
+use Fatturapa\Notifications\SdiNotification;
 use PDO;
 use PHPUnit\Framework\TestCase;
 

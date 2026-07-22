@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\Exception\TransportException;
-use AlpsFatturapa\Transport\PecTransport;
-use AlpsFatturapa\Transport\SmtpClient;
+use Fatturapa\Exception\TransportException;
+use Fatturapa\Transport\PecTransport;
+use Fatturapa\Transport\SmtpClient;
 use PHPUnit\Framework\TestCase;
 
 final class PecTransportTest extends TestCase

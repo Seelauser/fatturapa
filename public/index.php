@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use AlpsFatturapa\Contracts\SdiTransport;
-use AlpsFatturapa\Notifications\NotificationParser;
-use AlpsFatturapa\Notifications\PecInboxReader;
-use AlpsFatturapa\NumeratoreService;
-use AlpsFatturapa\Transport\OpenapiClient;
-use AlpsFatturapa\Transport\PecTransport;
-use AlpsFatturapa\XmlBuilder;
+use Fatturapa\Contracts\SdiTransport;
+use Fatturapa\Notifications\NotificationParser;
+use Fatturapa\Notifications\PecInboxReader;
+use Fatturapa\NumeratoreService;
+use Fatturapa\Transport\OpenapiClient;
+use Fatturapa\Transport\PecTransport;
+use Fatturapa\XmlBuilder;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
@@ -88,7 +88,7 @@ $app->post('/fattura/send', function (Request $req, Response $res) use ($json): 
     try {
         $result = transportFromEnv()->sendInvoice((string) $body['xml'], (array) ($body['meta'] ?? []));
         return $json($res, $result, 201);
-    } catch (\AlpsFatturapa\Exception\TransportException $e) {
+    } catch (\Fatturapa\Exception\TransportException $e) {
         return $json($res, ['error' => $e->getMessage()], 502);
     }
 });
@@ -97,7 +97,7 @@ $app->post('/fattura/send', function (Request $req, Response $res) use ($json): 
 $app->get('/fattura/status/{id}', function (Request $req, Response $res, array $args) use ($json): Response {
     try {
         return $json($res, transportFromEnv()->getInvoiceStatus((string) $args['id']));
-    } catch (\AlpsFatturapa\Exception\TransportException $e) {
+    } catch (\Fatturapa\Exception\TransportException $e) {
         return $json($res, ['error' => $e->getMessage()], 502);
     }
 });
@@ -144,7 +144,7 @@ $app->get('/fattura/inbox', function (Request $req, Response $res) use ($json): 
                 'invoice' => $f['invoice'],
             ], $found['invoices']),
         ]);
-    } catch (\AlpsFatturapa\Exception\TransportException $e) {
+    } catch (\Fatturapa\Exception\TransportException $e) {
         return $json($res, ['error' => $e->getMessage()], 502);
     }
 });
@@ -156,7 +156,7 @@ $app->post('/fattura/render', function (Request $req, Response $res) use ($json)
         return $json($res, ['error' => 'missing xml'], 422);
     }
     try {
-        $html = (new \AlpsFatturapa\Render\StylesheetRenderer())->renderHtml((string) $body['xml']);
+        $html = (new \Fatturapa\Render\StylesheetRenderer())->renderHtml((string) $body['xml']);
         $res->getBody()->write($html);
         return $res->withHeader('Content-Type', 'text/html; charset=utf-8');
     } catch (\RuntimeException $e) {

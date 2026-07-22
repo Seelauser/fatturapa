@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Notifications;
+namespace Fatturapa\Notifications;
 
 use DOMDocument;
 use DOMElement;

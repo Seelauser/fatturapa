@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Notifications;
+namespace Fatturapa\Notifications;
 
 /**
  * Normalized SdI outcome notification (ricevuta/notifica), independent of the

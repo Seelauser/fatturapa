@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Notifications;
+namespace Fatturapa\Notifications;
 
-use AlpsFatturapa\Exception\TransportException;
-use AlpsFatturapa\Passive\P7mExtractor;
-use AlpsFatturapa\Passive\ReceivedInvoiceParser;
-use AlpsFatturapa\Transport\ImapClient;
+use Fatturapa\Exception\TransportException;
+use Fatturapa\Passive\P7mExtractor;
+use Fatturapa\Passive\ReceivedInvoiceParser;
+use Fatturapa\Transport\ImapClient;
 use InvalidArgumentException;
 
 /**

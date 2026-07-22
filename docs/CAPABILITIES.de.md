@@ -2,7 +2,7 @@
 
 🇮🇹 [Italiano](CAPABILITIES.md) · 🇬🇧 [English](CAPABILITIES.en.md) · 🇩🇪 Deutsch
 
-> Status-Audit von `alpsplanner/fatturapa`, verifiziert durch Ausführen des Codes auf PHP 8.3
+> Status-Audit von `seelauser/fatturapa`, verifiziert durch Ausführen des Codes auf PHP 8.3
 > (Tests, XSD-Validierung gegen das offizielle Schema und ein Live-Concurrency-Test
 > gegen MariaDB). Aktualisiert für **0.2.0** (siehe [CHANGELOG](../CHANGELOG.md)):
 > XSD 1.2.3, TD01–TD29, bollo (Stempelsteuer), Split Payment, CIG/CUP, DatiPagamento,

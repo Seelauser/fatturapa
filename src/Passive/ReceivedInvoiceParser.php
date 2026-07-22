@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Passive;
+namespace Fatturapa\Passive;
 
 use DOMDocument;
 use DOMElement;

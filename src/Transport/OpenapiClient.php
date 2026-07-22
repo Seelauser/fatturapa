@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Transport;
+namespace Fatturapa\Transport;
 
-use AlpsFatturapa\Contracts\SdiTransport;
-use AlpsFatturapa\Exception\TransportException;
+use Fatturapa\Contracts\SdiTransport;
+use Fatturapa\Exception\TransportException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\BadResponseException;
 use GuzzleHttp\Exception\GuzzleException;

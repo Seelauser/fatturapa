@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\NumeratoreService;
+use Fatturapa\NumeratoreService;
 use PDO;
 use PHPUnit\Framework\TestCase;
 

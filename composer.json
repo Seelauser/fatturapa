@@ -1,11 +1,11 @@
 {
-  "name": "alpsplanner/fatturapa",
+  "name": "seelauser/fatturapa",
   "description": "Framework-free PHP library to build Italian FatturaPA (SdI) e-invoice XML and reserve sequential invoice numbers, with an optional HTTP microservice.",
   "type": "library",
   "keywords": ["fatturapa", "sdi", "e-invoice", "italy", "fattura elettronica", "agenzia entrate"],
   "license": "MIT",
   "authors": [
-    { "name": "AlpsPlanner", "homepage": "https://alpsplanner.com" }
+    { "name": "Seelauser" }
   ],
   "require": {
     "php": "^8.2",
@@ -25,12 +25,12 @@
   },
   "autoload": {
     "psr-4": {
-      "AlpsFatturapa\\": "src/"
+      "Fatturapa\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "AlpsFatturapa\\Tests\\": "tests/"
+      "Fatturapa\\Tests\\": "tests/"
     }
   },
   "scripts": {

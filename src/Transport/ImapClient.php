@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Transport;
+namespace Fatturapa\Transport;
 
-use AlpsFatturapa\Exception\TransportException;
+use Fatturapa\Exception\TransportException;
 
 /**
  * Minimal IMAP4rev1 client — implicit TLS (port 993), LOGIN, SELECT, SEARCH,

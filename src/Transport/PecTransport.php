@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Transport;
+namespace Fatturapa\Transport;
 
-use AlpsFatturapa\Contracts\SdiTransport;
-use AlpsFatturapa\Exception\TransportException;
+use Fatturapa\Contracts\SdiTransport;
+use Fatturapa\Exception\TransportException;
 
 /**
  * SdI transport over the PEC channel — no intermediary service needed, only

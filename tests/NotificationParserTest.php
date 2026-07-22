@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\Notifications\NotificationParser;
-use AlpsFatturapa\Notifications\SdiNotification;
+use Fatturapa\Notifications\NotificationParser;
+use Fatturapa\Notifications\SdiNotification;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 

@@ -1,12 +1,12 @@
-# alpsplanner/fatturapa
+# seelauser/fatturapa
 
 🇮🇹 [Italiano](README.md) · 🇬🇧 [English](README.en.md) · 🇩🇪 Deutsch
 
 Eine **framework-freie** PHP-Bibliothek zum Erstellen des XML der italienischen
 **FatturaPA** (Sistema di Interscambio / SdI), zum Reservieren fortlaufender
 Rechnungsnummern und für den gesamten aktiven und passiven Rechnungszyklus — mit
-optionalem HTTP-Microservice. Aus [AlpsPlanner](https://alpsplanner.com) extrahiert
-und in jedem PHP-Projekt einsetzbar.
+optionalem HTTP-Microservice. Aus dem realen Bedarf eines Südtiroler Vereins entstanden
+und als eigenständiges, in jedem PHP-Projekt einsetzbares Paket aufbereitet.
 
 - **Keine Framework-Abhängigkeit** — der Kern (`XmlBuilder`, `NumeratoreService`)
   braucht nur `ext-dom`. Einsetzbar in CiviCRM, Laravel, Symfony oder purem PHP.
@@ -39,7 +39,7 @@ und in jedem PHP-Projekt einsetzbar.
 ## Installation
 
 ```bash
-composer require alpsplanner/fatturapa
+composer require seelauser/fatturapa
 ```
 
 Benötigt PHP 8.2+, `ext-dom`, `ext-libxml`.
@@ -47,7 +47,7 @@ Benötigt PHP 8.2+, `ext-dom`, `ext-libxml`.
 ## XML erstellen
 
 ```php
-use AlpsFatturapa\XmlBuilder;
+use Fatturapa\XmlBuilder;
 
 $xml = (new XmlBuilder())->build([
     'tipo_documento' => 'TD01',
@@ -99,7 +99,7 @@ $errors = (new XmlBuilder())->validate($xml); // [] wenn gültig
 ## Rechnungsnummer reservieren
 
 ```php
-use AlpsFatturapa\NumeratoreService;
+use Fatturapa\NumeratoreService;
 
 $svc = new NumeratoreService($pdo);       // MariaDB/MySQL, PostgreSQL oder SQLite ≥3.35; Tabelle konfigurierbar
 $svc->ensureTable();                       // legt `sdi_sequence` an, falls nicht vorhanden
@@ -112,7 +112,7 @@ $numero = $svc->next(2026, 'EXT');         // "2026/00001/EXT" (eigenes Sektiona
 ### Über das eigene PEC-Postfach — ohne Drittanbieter
 
 ```php
-use AlpsFatturapa\Transport\PecTransport;
+use Fatturapa\Transport\PecTransport;
 
 $pec = new PecTransport(
     pecAddress:  'firma@pec.example.it',
@@ -131,7 +131,7 @@ Die SdI-Quittungen landen im PEC-Postfach. Automatisch abrufen (eigener
 IMAP-Client, versteht die PEC-Umhüllung `postacert.eml`):
 
 ```php
-use AlpsFatturapa\Notifications\PecInboxReader;
+use Fatturapa\Notifications\PecInboxReader;
 
 foreach (PecInboxReader::createFromEnv()->fetchNotifications() as $f) {
     // $f['filename'], $f['notification'] (SdiNotification)
@@ -147,7 +147,7 @@ zugestellt/abgelehnt/…, `applyNotification()` schließt den Kreis automatisch)
 …oder eine bereits vorliegende Quittungs-XML interpretieren:
 
 ```php
-use AlpsFatturapa\Notifications\NotificationParser;
+use Fatturapa\Notifications\NotificationParser;
 
 $n = (new NotificationParser())->parse($attachmentXml);
 $n->tipo;          // 'RC' | 'NS' | 'MC' | 'NE' | 'DT' | 'AT'
@@ -165,19 +165,19 @@ aktivieren.
 ### Über Openapi.com (optionaler Intermediär)
 
 ```php
-use AlpsFatturapa\Transport\OpenapiClient;
+use Fatturapa\Transport\OpenapiClient;
 
 $client = OpenapiClient::createFromEnv(testMode: true); // liest OPENAPI_TOKEN
 $result = $client->sendInvoice($xml, ['numero' => '2026/00042']);
 // ['identificativo' => '<uuid>', 'raw' => [...]]
 ```
 
-Für andere Anbieter `AlpsFatturapa\Contracts\SdiTransport` implementieren.
+Für andere Anbieter `Fatturapa\Contracts\SdiTransport` implementieren.
 
 ## Lesbare Darstellung (offizielles Stylesheet)
 
 ```php
-$html = (new AlpsFatturapa\Render\StylesheetRenderer())->renderHtml($xml);
+$html = (new Fatturapa\Render\StylesheetRenderer())->renderHtml($xml);
 ```
 
 Benötigt `php-xsl` und das offizielle AdE-Stylesheet in `resources/xsl/` (aus

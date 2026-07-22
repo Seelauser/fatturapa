@@ -1,11 +1,11 @@
-# alpsplanner/fatturapa
+# seelauser/fatturapa
 
 🇮🇹 [Italiano](README.md) · 🇬🇧 English · 🇩🇪 [Deutsch](README.de.md)
 
 A small, **framework-free** PHP library to build Italian **FatturaPA** (Sistema di
 Interscambio / SdI) electronic-invoice XML and to reserve sequential invoice numbers —
-plus an optional HTTP microservice. Extracted from [AlpsPlanner](https://alpsplanner.com)
-and usable by any PHP project.
+plus an optional HTTP microservice. Born out of a real nonprofit's invoicing needs
+and made standalone and reusable by any PHP project.
 
 - **No framework dependency** — the core (`XmlBuilder`, `NumeratoreService`) needs only
   `ext-dom`. Drop it into CiviCRM, Laravel, Symfony, or plain PHP.
@@ -27,7 +27,7 @@ and usable by any PHP project.
 ## Install
 
 ```bash
-composer require alpsplanner/fatturapa
+composer require seelauser/fatturapa
 ```
 
 Requires PHP 8.2+, `ext-dom`, `ext-libxml`.
@@ -35,7 +35,7 @@ Requires PHP 8.2+, `ext-dom`, `ext-libxml`.
 ## Build XML
 
 ```php
-use AlpsFatturapa\XmlBuilder;
+use Fatturapa\XmlBuilder;
 
 $xml = (new XmlBuilder())->build([
     'tipo_documento' => 'fattura_b2c',
@@ -87,7 +87,7 @@ $errors = (new XmlBuilder())->validate($xml); // [] when valid
 ## Reserve an invoice number
 
 ```php
-use AlpsFatturapa\NumeratoreService;
+use Fatturapa\NumeratoreService;
 
 $svc = new NumeratoreService($pdo);       // MariaDB/MySQL, PostgreSQL or SQLite ≥3.35; table configurable
 $svc->ensureTable();                       // creates `sdi_sequence` if missing
@@ -100,7 +100,7 @@ $numero = $svc->next(2026, 'EXT');         // "2026/00001/EXT" (separate seziona
 ### Via your own PEC mailbox — no third-party service
 
 ```php
-use AlpsFatturapa\Transport\PecTransport;
+use Fatturapa\Transport\PecTransport;
 
 $pec = new PecTransport(
     pecAddress:  'azienda@pec.example.it',
@@ -119,7 +119,7 @@ SdI receipts arrive back in the PEC inbox. Poll it automatically (own IMAP
 client, handles the PEC `postacert.eml` nesting):
 
 ```php
-use AlpsFatturapa\Notifications\PecInboxReader;
+use Fatturapa\Notifications\PecInboxReader;
 
 foreach (PecInboxReader::createFromEnv()->fetchNotifications() as $f) {
     // $f['filename'], $f['notification'] (SdiNotification)
@@ -135,7 +135,7 @@ outbound state with `Lifecycle\InvoiceStore` (built → sent → delivered/rejec
 …or parse a notification XML you already have:
 
 ```php
-use AlpsFatturapa\Notifications\NotificationParser;
+use Fatturapa\Notifications\NotificationParser;
 
 $n = (new NotificationParser())->parse($attachmentXml);
 $n->tipo;          // 'RC' | 'NS' | 'MC' | 'NE' | 'DT' | 'AT'
@@ -152,14 +152,14 @@ For free 10-year conservazione, activate the Agenzia delle Entrate service in
 ### Via Openapi.com (optional intermediary)
 
 ```php
-use AlpsFatturapa\Transport\OpenapiClient;
+use Fatturapa\Transport\OpenapiClient;
 
 $client = OpenapiClient::createFromEnv(testMode: true); // reads OPENAPI_TOKEN
 $result = $client->sendInvoice($xml, ['numero' => '2026/00042']);
 // ['identificativo' => '<uuid>', 'raw' => [...]]
 ```
 
-Implement `AlpsFatturapa\Contracts\SdiTransport` to plug in a different provider.
+Implement `Fatturapa\Contracts\SdiTransport` to plug in a different provider.
 
 ## HTTP microservice (optional)
 

@@ -33,7 +33,7 @@ durevoli sono:
   morti; le agenzie PHP italiane sono fortemente su Laravel. Concorrenza zero.
 - **Estensione CiviCRM** — non esiste alcuna estensione FatturaPA nonostante il
   non profit italiano sia sotto obbligo dal 2019/2024. Terreno vergine, ed è il
-  campo di casa di questo pacchetto (AlpsPlanner/associazioni).
+  terreno di elezione di questo pacchetto (associazioni no-profit).
 - Essere il core integrabile per il frammentato mercato dei plugin: plugin
   WooCommerce per la fattura elettronica italiana (4.000/800/400… installazioni
   attive), moduli PrestaShop venduti a €120–168, moduli Magento — ognuno oggi

@@ -5,7 +5,7 @@
          colors="true"
          cacheDirectory=".phpunit.cache">
   <testsuites>
-    <testsuite name="alpsplanner/fatturapa">
+    <testsuite name="seelauser/fatturapa">
       <directory>tests</directory>
     </testsuite>
   </testsuites>

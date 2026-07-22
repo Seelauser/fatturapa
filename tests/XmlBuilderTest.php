@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\XmlBuilder;
+use Fatturapa\XmlBuilder;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 

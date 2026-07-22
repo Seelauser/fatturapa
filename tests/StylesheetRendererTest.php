@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\Render\StylesheetRenderer;
-use AlpsFatturapa\XmlBuilder;
+use Fatturapa\Render\StylesheetRenderer;
+use Fatturapa\XmlBuilder;
 use PHPUnit\Framework\TestCase;
 
 final class StylesheetRendererTest extends TestCase

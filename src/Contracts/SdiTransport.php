@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Contracts;
+namespace Fatturapa\Contracts;
 
-use AlpsFatturapa\Exception\TransportException;
+use Fatturapa\Exception\TransportException;
 
 /**
  * Abstraction over the SdI transmission intermediary so the concrete provider

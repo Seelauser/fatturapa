@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\Exception\TransportException;
-use AlpsFatturapa\Transport\OpenapiClient;
+use Fatturapa\Exception\TransportException;
+use Fatturapa\Transport\OpenapiClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;

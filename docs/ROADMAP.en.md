@@ -32,7 +32,7 @@ deved on XML generation alone is a losing move; the durable differentiators are:
   dead; Italian PHP agencies are heavily Laravel. Zero competition.
 - **CiviCRM extension** — no FatturaPA extension exists at all despite Italian
   nonprofits being under the mandate since 2019/2024. Greenfield, and it is this
-  package's home turf (AlpsPlanner/associations).
+  package's home turf (nonprofit associations).
 - Being the embeddable core for the fragmented plugin market: WooCommerce Italian
   e-invoice plugins (4,000/800/400… active installs), PrestaShop modules sold at
   €120–168, Magento modules — each currently hand-rolls XML or hard-wires one SaaS.

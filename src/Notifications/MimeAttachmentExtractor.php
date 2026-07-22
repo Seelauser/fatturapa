@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Notifications;
+namespace Fatturapa\Notifications;
 
 /**
  * Extracts file attachments from a raw RFC 5322 (MIME) message, recursing into

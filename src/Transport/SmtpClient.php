@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Transport;
+namespace Fatturapa\Transport;
 
-use AlpsFatturapa\Exception\TransportException;
+use Fatturapa\Exception\TransportException;
 
 /**
  * Minimal SMTP client for PEC delivery — implicit TLS (port 465) + AUTH LOGIN.

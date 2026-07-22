@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Lifecycle;
+namespace Fatturapa\Lifecycle;
 
-use AlpsFatturapa\Notifications\SdiNotification;
+use Fatturapa\Notifications\SdiNotification;
 use PDO;
 
 /**

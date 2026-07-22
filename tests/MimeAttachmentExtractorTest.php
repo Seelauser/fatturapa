@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\Notifications\MimeAttachmentExtractor;
-use AlpsFatturapa\Notifications\NotificationParser;
-use AlpsFatturapa\Notifications\SdiNotification;
+use Fatturapa\Notifications\MimeAttachmentExtractor;
+use Fatturapa\Notifications\NotificationParser;
+use Fatturapa\Notifications\SdiNotification;
 use PHPUnit\Framework\TestCase;
 
 final class MimeAttachmentExtractorTest extends TestCase

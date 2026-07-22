@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AlpsFatturapa\Tests;
+namespace Fatturapa\Tests;
 
-use AlpsFatturapa\Passive\P7mExtractor;
-use AlpsFatturapa\Passive\ReceivedInvoiceParser;
-use AlpsFatturapa\XmlBuilder;
+use Fatturapa\Passive\P7mExtractor;
+use Fatturapa\Passive\ReceivedInvoiceParser;
+use Fatturapa\XmlBuilder;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
